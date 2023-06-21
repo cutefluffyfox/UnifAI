@@ -1,0 +1,7 @@
+numpy==1.24.3
+faster-whisper==0.6.0
+torch==2.0.1
+websockets~=11.0.3
+uvicorn~=0.20.0
+fastapi~=0.96.0
+PyAudio~=0.2.13

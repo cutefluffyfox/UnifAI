@@ -22,6 +22,7 @@ class ConnectionManager:
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
 
+    @staticmethod
     async def send_translated_message(self, data: Dict, websocket: WebSocket):
         target_languages = {}
         result = {'translation': data['text']}
@@ -44,7 +45,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
     try:
         while True:
             data = await websocket.receive_json()
-            await manager.send_translated_message(data, websocket)
+            print('Received:', data)
+            # await manager.send_translated_message(data, websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
