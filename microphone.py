@@ -16,7 +16,7 @@ class Microphone:
 
         self._device_index = device_index or self.get_matching_device_index()
 
-        self.stream = self._audio.open(
+        self._stream = self._audio.open(
             format=pyaudio.paInt16,
             channels=self.num_channels,
             rate=self.sample_rate,
@@ -28,7 +28,7 @@ class Microphone:
     def __enter__(self):
         logger.info('Started listening')
         self.is_running = True
-        self.stream.start_stream()
+        self._stream.start_stream()
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
@@ -43,8 +43,8 @@ class Microphone:
 
     def _stop_stream(self):
         self.is_running = False
-        self.stream.stop_stream()
-        self.stream.close()
+        self._stream.stop_stream()
+        self._stream.close()
         self._audio.terminate()
 
     def get_matching_device_index(self):
@@ -68,7 +68,7 @@ class Microphone:
             logger.info(f'No audio devices found')
         logger.info('No matching audio devices found')
 
-    def listen(self):
+    def stream(self):
         vad_params = {
             'min_speech_duration_ms': 100,
             'min_silence_duration_ms': 700,
@@ -79,10 +79,10 @@ class Microphone:
 
         try:
             while self.is_running:
-                if not self.stream.is_active():
+                if not self._stream.is_active():
                     break
 
-                data = self.stream.read(self.frames_per_buffer // 8)
+                data = self._stream.read(self.frames_per_buffer // 8)
 
                 audio = np.frombuffer(data, np.int16).astype(np.float32) * (1 / 32768.0)
                 speech_chunks = get_speech_timestamps(audio, **vad_params)

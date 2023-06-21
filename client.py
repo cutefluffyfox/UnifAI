@@ -107,12 +107,11 @@ if __name__ == '__main__':
     with connect(f'ws://{SERVER_URL}/ws/{now}') as ws:
         logging.info(f'Connected to the server {SERVER_URL}')
         with Microphone() as mic:
-            while True:
-                for audio_segment in mic.listen():
-                    duration = audio_segment.shape[0] / mic.sample_rate
+            for audio_segment in mic.stream():
+                duration = audio_segment.shape[0] / mic.sample_rate
 
-                    data = model.transcribe_speech(audio_segment)
-                    data['duration'] = duration
+                data = model.transcribe_speech(audio_segment)
+                data['duration'] = duration
 
-                    data = json.dumps(data)
-                    ws.send(data)
+                data = json.dumps(data)
+                ws.send(data)
