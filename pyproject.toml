@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "unifai-translation"
+version = "0.1.0"
+description = ""
+authors = ["geffk2 <sluxx@icloud.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.97.0"
+websockets = "^11.0.3"
+uvicorn = "^0.22.0"
+asyncio = "^3.4.3"
+python-multipart = "^0.0.6"
+fastapi-jwt-auth = "^0.5.0"
+pydantic = "^1.10.9"
+python-decouple = "^3.8"
+passlib = "^1.7.4"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+server = "unifai_translation.server:main"
+
+[tool.poetry.group.dev.dependencies]
+setuptools = "^68.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[virtualenvs]
+create = true
+in-project = true
