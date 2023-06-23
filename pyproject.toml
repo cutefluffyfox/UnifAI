@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "unifai"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^1.24.3"
+faster-whisper = "^0.6.0"
+torch = "^2.0.1"
+websockets = "^11.0.3"
+uvicorn = "^0.20.0"
+fastapi = "^0.96.0"
+PyAudio = "^0.2.13"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
