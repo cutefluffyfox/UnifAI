@@ -13,10 +13,15 @@
             inherit system;
             overlays = [ gomod2nix.overlays.default ];
           };
+					goApp = pkgs.callPackage ./. { };
 
+          dockerImg = import ./docker.nix { inherit pkgs; };
         in
         {
-          packages.default = pkgs.callPackage ./. { };
+          packages = {
+							default = goApp;
+							docker = dockerImg;
+						};
           devShells.default = import ./shell.nix { inherit pkgs; };
         })
     );

@@ -17,6 +17,12 @@ func Connect() *pgx.Conn {
   return conn
 }
 
+func Migrate(c *pgx.Conn) {
+	CreateUserTable(c)
+	CreateRoomsTable(c)
+	CreateRoomsUsersRelation(c)
+}
+
 func CreateUserTable(c *pgx.Conn) {
   req := `CREATE TABLE IF NOT EXISTS "users" (
   "id" serial PRIMARY KEY, 
@@ -30,4 +36,31 @@ func CreateUserTable(c *pgx.Conn) {
   }
 
   fmt.Println("Created users table")
+}
+
+func CreateRoomsTable(c *pgx.Conn) {
+	req := `CREATE TABLE IF NOT EXISTS "rooms" (
+		"id" serial PRIMARY KEY,
+		"name" varchar,
+		"description" varchar)`
+
+  if _, err := c.Exec(context.Background(), req); err != nil {
+    fmt.Fprintf(os.Stderr, "Could not create rooms table: %v\n", err)
+    os.Exit(1)
+  }
+
+  fmt.Println("Created rooms table")
+}
+
+func CreateRoomsUsersRelation(c *pgx.Conn) {
+	req := `CREATE TABLE IF NOT EXISTS "rooms_users" (
+		"user_id" integer references users(id),
+		"room_id" integer references rooms(id))`
+
+  if _, err := c.Exec(context.Background(), req); err != nil {
+    fmt.Fprintf(os.Stderr, "Could not create rooms-users table: %v\n", err)
+    os.Exit(1)
+  }
+
+  fmt.Println("Created rooms-users table")
 }

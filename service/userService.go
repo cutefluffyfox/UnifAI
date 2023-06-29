@@ -7,7 +7,7 @@ import (
 )
 
 type UserService interface {
-	Save(user entity.User) (entity.User, error)
+	Register(user entity.User) (entity.User, error)
 	FindUserById(id int) (entity.User, error)
 
 	SaveAudioFile(userId int, content []byte) (bool, error)
@@ -31,7 +31,7 @@ func (*userService) GetAudioFile(userId int) ([]byte, error) {
 }
 
 // Save implements UserService.
-func (*userService) Save(user entity.User) (entity.User, error) {
+func (*userService) Register(user entity.User) (entity.User, error) {
 	panic("unimplemented")
 }
 
