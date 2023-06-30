@@ -4,6 +4,7 @@ import dearpygui.dearpygui as dpg
 import sys
 import ctypes
 from configparser import ConfigParser
+import sounddevice
 
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 700
@@ -20,6 +21,8 @@ class Settings:
         self.settings_file = settings_file
         self.volume = 100
         self.playback_speed = 1
+        self.model_size = "medium"
+        self.input_device_name = "default"
 
     def read_settings_from_file(self):
         config = ConfigParser()
@@ -30,6 +33,8 @@ class Settings:
             try:
                 self.volume = config.getfloat('main', 'volume')
                 self.playback_speed = config.getfloat('main', 'playback_speed')
+                self.model_size = config.get('main', 'model_size')
+                self.input_device_name = config.get('main', 'input_device_name')
             except:
                 pass
 
@@ -41,6 +46,8 @@ class Settings:
         config.add_section('main')
         config.set('main', 'volume', str(self.volume))
         config.set('main', 'playback_speed', str(self.playback_speed))
+        config.set('main', 'model_size', self.model_size)
+        config.set('main', 'input_device_name', self.input_device_name)
         with open(self.settings_file, 'w') as f:
             config.write(f)
 
@@ -68,6 +75,10 @@ def load_image_from_file(image_file, texture_tag: str):
     return width, height
 
 
+def get_input_device_names():
+    return list(map(lambda x: x['name'], list(filter(lambda x: x['max_input_channels'] > 1, sounddevice.query_devices()))))
+
+
 def login_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
 
@@ -86,6 +97,18 @@ def change_playback_speed_callback(sender):
     global settings_object_global
     playback_speed_value = dpg.get_value(sender)
     settings_object_global.playback_speed = playback_speed_value
+
+
+def change_model_size_callback(sender):
+    global settings_object_global
+    model_size_value = str.lower(dpg.get_value(sender))
+    settings_object_global.model_size = model_size_value
+
+
+def change_input_device_callback(sender):
+    global settings_object_global
+    input_device_name_value = dpg.get_value(sender)
+    settings_object_global.input_device_name = input_device_name_value
 
 
 def save_settings_callback(sender):
@@ -138,6 +161,8 @@ def main():
     with dpg.window(label="Settings", autosize=True, show=False, on_close=save_settings_callback) as settings_window_global:
         dpg.add_slider_float(label="Volume", clamped=True, tag="settings_volume_slider_box", default_value=settings_object_global.volume, callback=change_volume_callback)
         dpg.add_slider_float(label="Playback Speed", clamped=True, tag="settings_playback_speed_slider_box", min_value=0.3, max_value=5, default_value=settings_object_global.playback_speed, callback=change_playback_speed_callback)
+        dpg.add_combo(["Tiny", "Base", "Small", "Medium", "Large"], label="Model Size", tag="settings_model_size_combo_box", default_value=str.capitalize(settings_object_global.model_size), callback=change_model_size_callback)
+        dpg.add_combo(get_input_device_names(), label="Input Device", tag="settings_input_device_combo_box", default_value=settings_object_global.input_device_name, callback=change_input_device_callback)
         dpg.add_button(label="Save Settings", callback=save_settings_callback)
 
     with dpg.viewport_menu_bar():
