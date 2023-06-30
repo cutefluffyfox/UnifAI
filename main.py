@@ -12,6 +12,7 @@ WINDOW_HEIGHT = 700
 
 login_window_global = -1
 settings_window_global = -1
+language_settings_window_global = -1
 voice_recording_window_global = -1
 main_app_window_global = -1
 
@@ -19,10 +20,14 @@ main_app_window_global = -1
 class Settings:
     def __init__(self, settings_file):
         self.settings_file = settings_file
+        # Main settings
         self.volume = 100
         self.playback_speed = 1
         self.model_size = "medium"
         self.input_device_name = "default"
+        # Language settings
+        self.language = "english"
+        self.language_model = "medium"
 
     def read_settings_from_file(self):
         config = ConfigParser()
@@ -35,6 +40,8 @@ class Settings:
                 self.playback_speed = config.getfloat('main', 'playback_speed')
                 self.model_size = config.get('main', 'model_size')
                 self.input_device_name = config.get('main', 'input_device_name')
+                self.language = config.get('language', 'language')
+                self.language_model = config.get('language', 'language_model')
             except:
                 pass
 
@@ -48,6 +55,9 @@ class Settings:
         config.set('main', 'playback_speed', str(self.playback_speed))
         config.set('main', 'model_size', self.model_size)
         config.set('main', 'input_device_name', self.input_device_name)
+        config.add_section('language')
+        config.set('language', 'language', self.language)
+        config.set('language', 'language_model', self.language_model)
         with open(self.settings_file, 'w') as f:
             config.write(f)
 
@@ -79,12 +89,33 @@ def get_input_device_names():
     return list(map(lambda x: x['name'], list(filter(lambda x: x['max_input_channels'] > 1, sounddevice.query_devices()))))
 
 
+def get_eligible_languages():
+    language_list = ["English", "Russian", "German", "Japanese", "Chinese"]
+    return language_list
+
+
+def get_eligible_models_for_language(language):
+    language = str.lower(language)
+    language_model = {
+        "english": ["tiny", "base", "small", "medium", "large"],
+        "russian": ["base", "small", "large"],
+        "german": ["small", "medium", "large"],
+        "japanese": ["base", "medium", "large"],
+        "chinese": ["tiny", "medium", "large"],
+    }
+    return language_model[language]
+
+
 def login_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
 
 
 def open_settings_window_callback():
     dpg.show_item(settings_window_global)
+
+
+def open_language_settings_window_callback():
+    dpg.show_item(language_settings_window_global)
 
 
 def change_volume_callback(sender):
@@ -111,6 +142,21 @@ def change_input_device_callback(sender):
     settings_object_global.input_device_name = input_device_name_value
 
 
+def change_language_callback(sender):
+    global settings_object_global
+    language_value = dpg.get_value(sender)
+    settings_object_global.language = language_value
+    eligible_models = get_eligible_models_for_language(language_value)
+    dpg.configure_item("settings_language_model_combo_box", items=eligible_models)
+    dpg.set_value("settings_language_model_combo_box", eligible_models[0])
+
+
+def change_language_model_callback(sender):
+    global settings_object_global
+    language_model_value = dpg.get_value(sender)
+    settings_object_global.language_model = language_model_value
+
+
 def save_settings_callback(sender):
     global settings_object_global
     settings_object_global.write_settings_to_file()
@@ -119,6 +165,7 @@ def save_settings_callback(sender):
 def main():
     global login_window_global
     global settings_window_global
+    global language_settings_window_global
     global voice_recording_window_global
     global main_app_window_global
 
@@ -165,8 +212,15 @@ def main():
         dpg.add_combo(get_input_device_names(), label="Input Device", tag="settings_input_device_combo_box", default_value=settings_object_global.input_device_name, callback=change_input_device_callback)
         dpg.add_button(label="Save Settings", callback=save_settings_callback)
 
+    with dpg.window(label="Language Settings", autosize=True, show=False, on_close=save_settings_callback) as language_settings_window_global:
+        dpg.add_combo(list(map(lambda x: str.capitalize(x), get_eligible_languages())), label="Language", tag="settings_language_combo_box", default_value=str.capitalize(settings_object_global.language), callback=change_language_callback)
+        dpg.add_combo(get_eligible_models_for_language(settings_object_global.language), label="Language Model", tag="settings_language_model_combo_box", default_value=settings_object_global.language_model, callback=change_language_model_callback)
+        dpg.add_button(label="Save Settings", callback=save_settings_callback)
+
+
     with dpg.viewport_menu_bar():
         dpg.add_menu_item(label="Settings", callback=open_settings_window_callback)
+        dpg.add_menu_item(label="Language Settings", callback=open_language_settings_window_callback)
     dpg.show_viewport()
     dpg.start_dearpygui()
     dpg.destroy_context()
