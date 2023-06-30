@@ -30,7 +30,7 @@ class FasterWhisper:
     def configure_model_parameters():
         if torch.cuda.is_available():
             compute_type = 'float16'
-            device = 'gpu'
+            device = 'cuda'
             torch.device('cuda')
         else:
             # compute_type = 'int8'
