@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 import multiprocessing
+import json
 import uvicorn
 import asyncio
 
@@ -23,10 +24,11 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     @staticmethod
-    async def send_translated_message(self, data: Dict, websocket: WebSocket):
+    async def send_translated_message(data, websocket: WebSocket):
         target_languages = {}
+        data = json.loads(data)
         result = {'translation': data['text']}
-        await websocket.send_json(result)
+        await websocket.send_text(json.dumps(result))
 
 
 manager = ConnectionManager()
@@ -44,10 +46,11 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
     await manager.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_json()
+            data = await websocket.receive_text()
             print('Received:', data)
-            # await manager.send_translated_message(data, websocket)
-    except WebSocketDisconnect:
+            await manager.send_translated_message(data, websocket)
+    except WebSocketDisconnect as e:
+        print('Disconnecting', e)
         manager.disconnect(websocket)
 
 

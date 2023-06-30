@@ -5,3 +5,5 @@ websockets~=11.0.3
 uvicorn~=0.20.0
 fastapi~=0.96.0
 PyAudio~=0.2.13
+websocket-client~=1.5.1
+rel~=0.4.9

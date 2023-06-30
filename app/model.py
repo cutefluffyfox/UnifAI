@@ -1,21 +1,11 @@
-from websockets.sync.client import connect
 from faster_whisper import WhisperModel
-from microphone import Microphone
-
-from time import time
 import numpy as np
 
-import logging
-
 import torch
-import json
 
 MODELS = ['tiny', 'tiny.en', 'base', 'base.en',
           'small', 'small.en', 'medium', 'medium.en',
           'large-v1', 'large-v2']
-
-SERVER_URL = "127.0.0.1:5000"
-logging.basicConfig(level=logging.INFO)
 
 
 class FasterWhisper:
@@ -43,7 +33,8 @@ class FasterWhisper:
             device = 'gpu'
             torch.device('cuda')
         else:
-            compute_type = 'int8'
+            # compute_type = 'int8'
+            compute_type = 'float32'
             device = 'cpu'
             torch.device('cpu')
 
@@ -95,23 +86,6 @@ class FasterWhisper:
             text += segment.text
 
         return {'text': text.strip(),
+                'delay': 0.,
                 'language': language,
                 'language_probability': lang_prob}
-
-
-if __name__ == '__main__':
-    model = FasterWhisper(model_name='tiny')
-
-    now = round(time())
-
-    with connect(f'ws://{SERVER_URL}/ws/{now}') as ws:
-        logging.info(f'Connected to the server {SERVER_URL}')
-        with Microphone() as mic:
-            for audio_segment in mic.stream():
-                duration = audio_segment.shape[0] / mic.sample_rate
-
-                data = model.transcribe_speech(audio_segment)
-                data['duration'] = duration
-
-                data = json.dumps(data)
-                ws.send(data)
