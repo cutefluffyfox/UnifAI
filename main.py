@@ -1,9 +1,51 @@
+import configparser
+
 import dearpygui.dearpygui as dpg
 import sys
 import ctypes
+from configparser import ConfigParser
 
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 700
+
+
+login_window_global = -1
+settings_window_global = -1
+voice_recording_window_global = -1
+main_app_window_global = -1
+
+
+class Settings:
+    def __init__(self, settings_file):
+        self.settings_file = settings_file
+        self.volume = 100
+        self.playback_speed = 1
+
+    def read_settings_from_file(self):
+        config = ConfigParser()
+        read_result = config.read(self.settings_file)
+        if not read_result:
+            pass
+        else:
+            try:
+                self.volume = config.getfloat('main', 'volume')
+                self.playback_speed = config.getfloat('main', 'playback_speed')
+            except:
+                pass
+
+    def write_settings_to_file(self):
+        config = ConfigParser()
+        with open(self.settings_file, 'w'):
+            pass
+        config.read(self.settings_file)
+        config.add_section('main')
+        config.set('main', 'volume', str(self.volume))
+        config.set('main', 'playback_speed', str(self.playback_speed))
+        with open(self.settings_file, 'w') as f:
+            config.write(f)
+
+
+settings_object_global = Settings('config.ini')
 
 
 def fix_icon_for_taskbar():
@@ -30,7 +72,34 @@ def login_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
 
 
+def open_settings_window_callback():
+    dpg.show_item(settings_window_global)
+
+
+def change_volume_callback(sender):
+    global settings_object_global
+    volume_value = dpg.get_value(sender)
+    settings_object_global.volume = volume_value
+
+
+def change_playback_speed_callback(sender):
+    global settings_object_global
+    playback_speed_value = dpg.get_value(sender)
+    settings_object_global.playback_speed = playback_speed_value
+
+
+def save_settings_callback(sender):
+    global settings_object_global
+    settings_object_global.write_settings_to_file()
+
+
 def main():
+    global login_window_global
+    global settings_window_global
+    global voice_recording_window_global
+    global main_app_window_global
+
+    global settings_object_global
     dpg.create_context()
     dpg.create_viewport(title='UnifAI', small_icon='unifai-icon-32x32.ico', large_icon='unifai-icon-64x64.ico', resizable=False, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     fix_icon_for_taskbar()
@@ -38,7 +107,9 @@ def main():
 
     logo_dimensions = load_image_from_file("unifai-logo.png", "unifai-logo")
 
-    with dpg.window(label="Primary Window", autosize=True, no_title_bar=True, no_move=True) as window:
+    settings_object_global.read_settings_from_file()
+
+    with dpg.window(label="Login", autosize=True, no_title_bar=True, no_move=True) as login_window_global:
         with dpg.table(header_row=False, policy=dpg.mvTable_SizingStretchProp):
             cell_width = logo_dimensions[0] / 3
             dpg.add_table_column(width=(WINDOW_WIDTH - cell_width) / 2, width_stretch=True)
@@ -57,12 +128,20 @@ def main():
                     dpg.add_text("Login Screen", tag="logintext")
                     dpg.add_input_text(label="Server Address", tag="addressbox")
                     dpg.add_input_text(label="Username", tag="usernamebox")
+                    dpg.add_input_text(label="Password", tag="passwordbox", password=True)
                     dpg.add_button(label="Log In", callback=login_callback, width=cell_width)
                 with dpg.table_cell():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
                     pass
-        dpg.set_primary_window(window, True)
+        dpg.set_primary_window(login_window_global, True)
 
+    with dpg.window(label="Settings", autosize=True, show=False, on_close=save_settings_callback) as settings_window_global:
+        dpg.add_slider_float(label="Volume", clamped=True, tag="settings_volume_slider_box", default_value=settings_object_global.volume, callback=change_volume_callback)
+        dpg.add_slider_float(label="Playback Speed", clamped=True, tag="settings_playback_speed_slider_box", min_value=0.3, max_value=5, default_value=settings_object_global.playback_speed, callback=change_playback_speed_callback)
+        dpg.add_button(label="Save Settings", callback=save_settings_callback)
+
+    with dpg.viewport_menu_bar():
+        dpg.add_menu_item(label="Settings", callback=open_settings_window_callback)
     dpg.show_viewport()
     dpg.start_dearpygui()
     dpg.destroy_context()
