@@ -8,12 +8,12 @@ import (
 )
 
 type RoomService interface {
-	NewRoom(entity.Room) (bool, error)
-	DeleteRoom(int) (bool, error)
+	NewRoom(entity.Room) error
+	DeleteRoom(int) error
 	FindRoomById(int) (entity.Room, error)
 
-	JoinRoom(int, int) (bool, error)
-	LeaveRoom(int, int) (bool, error)
+	JoinRoom(int, int) error
+	LeaveRoom(int, int) error
 }
 
 type roomService struct{}
@@ -25,27 +25,27 @@ func NewRoomService(c *pgx.Conn) RoomService {
 }
 
 // DeleteRoom implements RoomService.
-func (roomService) DeleteRoom(int) (bool, error) {
+func (roomService) DeleteRoom(roomId int) error {
 	panic("unimplemented")
 }
 
 // FindRoomById implements RoomService.
-func (roomService) FindRoomById(int) (entity.Room, error) {
+func (roomService) FindRoomById(roomId int) (entity.Room, error) {
 	panic("unimplemented")
 }
 
 // JoinRoom implements RoomService.
-func (roomService) JoinRoom(int, int) (bool, error) {
+func (roomService) JoinRoom(roomId int, userId int) error {
 	panic("unimplemented")
 }
 
 // LeaveRoom implements RoomService.
-func (roomService) LeaveRoom(int, int) (bool, error) {
+func (roomService) LeaveRoom(roomId int, userId int) error {
 	panic("unimplemented")
 }
 
 // NewRoom implements RoomService.
-func (roomService) NewRoom(entity.Room) (bool, error) {
+func (roomService) NewRoom(room entity.Room) error {
 	panic("unimplemented")
 }
 

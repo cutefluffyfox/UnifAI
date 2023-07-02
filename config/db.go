@@ -24,11 +24,11 @@ func Migrate(c *pgx.Conn) {
 }
 
 func CreateUserTable(c *pgx.Conn) {
-  req := `CREATE TABLE IF NOT EXISTS "users" (
-  "id" serial PRIMARY KEY, 
-  "email" varchar,
-  "username" varchar,
-  "passhash" bytea )`
+  req := `drop table if exists "users";
+	CREATE TABLE IF NOT EXISTS "users" (
+		"id" serial PRIMARY KEY, 
+		"username" varchar UNIQUE,
+		"passhash" varchar )`
 
   if _, err := c.Exec(context.Background(), req); err != nil {
     fmt.Fprintf(os.Stderr, "Could not create users table: %v\n", err)
@@ -39,10 +39,11 @@ func CreateUserTable(c *pgx.Conn) {
 }
 
 func CreateRoomsTable(c *pgx.Conn) {
-	req := `CREATE TABLE IF NOT EXISTS "rooms" (
-		"id" serial PRIMARY KEY,
-		"name" varchar,
-		"description" varchar)`
+	req := `drop table is exists "rooms"; 
+		CREATE TABLE IF NOT EXISTS "rooms" (
+			"id" serial PRIMARY KEY,
+			"name" varchar,
+			"description" varchar)`
 
   if _, err := c.Exec(context.Background(), req); err != nil {
     fmt.Fprintf(os.Stderr, "Could not create rooms table: %v\n", err)
@@ -53,7 +54,8 @@ func CreateRoomsTable(c *pgx.Conn) {
 }
 
 func CreateRoomsUsersRelation(c *pgx.Conn) {
-	req := `CREATE TABLE IF NOT EXISTS "rooms_users" (
+	req := `drop table if exists "rooms_users";
+		CREATE TABLE IF NOT EXISTS "rooms_users" (
 		"user_id" integer references users(id),
 		"room_id" integer references rooms(id))`
 

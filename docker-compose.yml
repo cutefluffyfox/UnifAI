@@ -1,0 +1,19 @@
+services:
+  web:
+    image: "unifai-golang-backend"
+    ports:
+      - 8080:8080
+    environment:
+      PORT: "8080"
+      DB_URL: "postgres"
+  db:
+    image: postgres 
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD: unifaipg
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+

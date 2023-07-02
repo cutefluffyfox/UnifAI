@@ -14,37 +14,42 @@ import (
 func CreateTokenPair(uid int) (*TokenDetails, error) {
 	td := &TokenDetails{}
 
-	td.AtExpires = time.Now().Add(time.Hour * 2).Unix()
+	// Contructing access token
+	exp := time.Now().Add(time.Hour * 2)
 	id, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
 	}
-	td.AccessUuid = id.String()
 
-	td.RtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
-	id, err = uuid.NewV4()
-	if err != nil {
-		return nil, err
+	atClaims := TokenClaims{
+		TokenType: "access",
+		UserId: uid,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID: id.String(),
+			ExpiresAt: jwt.NewNumericDate(exp),
+		},
 	}
-	td.RefreshUuid = id.String()
-
-	atClaims := jwt.MapClaims{}
-	atClaims["type"] = "access"
-	atClaims["uuid"] = td.AccessUuid
-	atClaims["user_id"] = uid
-	atClaims["exp"] = td.AtExpires
-
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
 	td.AccessToken, err = at.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		return nil, err
 	}
 
-	rtClaims := jwt.MapClaims{}
-	rtClaims["type"] = "refresh"
-	rtClaims["uuid"] = td.RefreshUuid
-	rtClaims["user_id"] = uid
-	rtClaims["exp"] = td.RtExpires
+	// Constructing refresh token
+	exp = time.Now().Add(time.Hour * 24 * 7)
+	id, err = uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
+	rtClaims := TokenClaims{
+		TokenType: "refresh",
+		UserId: uid,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID: id.String(),
+			ExpiresAt: jwt.NewNumericDate(exp),
+		},
+	}
 
 	rt := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
 	td.RefreshToken, err = rt.SignedString([]byte(os.Getenv("JWT_SECRET")))
@@ -56,31 +61,14 @@ func CreateTokenPair(uid int) (*TokenDetails, error) {
 }
 
 func ParseToken(tokenStr string) (*jwt.Token, error) {
-	t, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		// if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-		// 	return nil, fmt.Errorf("Unexpected signing method: %v\n", token.Header["alg"])
-		// } // seemingly addressed with WithValidMethods (?)
+	getSecret := func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
-	}, jwt.WithValidMethods([]string{"HMAC"}) )
+	}
+
+	t, err := jwt.ParseWithClaims(tokenStr, &TokenClaims{}, getSecret, jwt.WithValidMethods([]string{"HS256"}) )
 	return t, err
 }
 
-// Check that token is still valid
-func ValidateToken(token *jwt.Token) (bool, error) {
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		if et, err := claims.GetExpirationTime(); err == nil {
-			if et.After(time.Now()) {
-				return true, nil
-			} else {
-				return false, jwt.ErrTokenExpired
-			}
-		} else {
-			return false, err
-		}
-	} else {
-		return false, jwt.ErrTokenInvalidClaims
-	}
-}
 
 func ExtractToken(r *http.Request) (string, error) {
 	raw := r.Header.Get("Authorization")
@@ -91,7 +79,8 @@ func ExtractToken(r *http.Request) (string, error) {
 	return "", InvalidHeaderError{}
 }
 
-func TokenAuthMiddleware() gin.HandlerFunc {
+// Validates jwt token, compares its type(refresh/access) and sets user_id header to id stored in the token
+func TokenAuthMiddleware(tokenType string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		tstr, err := ExtractToken(ctx.Request)
 		if err != nil {
@@ -106,18 +95,15 @@ func TokenAuthMiddleware() gin.HandlerFunc {
 			ctx.Abort()
 			return
 		}
-		// if tok == nil {
-		// 	ctx.JSON(http.StatusUnauthorized, jwt.ErrTokenMalformed.Error())
-		// 	ctx.Abort()
-		// 	return
-		// }
 		
-		if res, err := ValidateToken(tok); !res || err != nil {
-			ctx.JSON(http.StatusUnauthorized, err.Error())
+		claims, ok := tok.Claims.(*TokenClaims)
+		if !ok {
+			ctx.JSON(http.StatusUnauthorized, jwt.ErrTokenInvalidClaims.Error())
 			ctx.Abort()
 			return
 		}
 
+		ctx.Set("user_id", claims.UserId)
 		ctx.Next()
 	}
 }
@@ -128,23 +114,14 @@ func (err InvalidHeaderError) Error() string {
 	return "Invalid Authorization header"
 }
 
+type TokenClaims struct {
+	UserId int	`json:"user_id"`
+	TokenType string `json:"type"`
+	jwt.RegisteredClaims
+}
+
 type TokenDetails struct {
-	AccessToken  string
-	RefreshToken string
-	AccessUuid   string
-	RefreshUuid  string
-	AtExpires    int64
-	RtExpires    int64
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
-type AccessDetails struct {
-	AccessUuid string
-	UserId     int
-	Expires    int64
-}
-
-type RefreshDetails struct {
-	RefreshUuid string
-	UserId      int
-	Expires     int64
-}
