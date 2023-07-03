@@ -2,12 +2,23 @@ import os
 import json
 import shutil
 import logging
+import hashlib
 
 from TTS.api import TTS
 from huggingface_hub import hf_hub_download
 
 
+def calculate_md5(file_name) -> str:
+    """Calculates file md5 hash"""
+    hash_md5 = hashlib.md5()
+    with open(file_name, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+
 class Downloader:
+    """Base class for model downloader"""
     home = os.path.expanduser("~")
     cwd = os.getcwd()
     models_path = os.path.join(os.path.dirname(cwd), 'models')
@@ -17,9 +28,11 @@ class Downloader:
         self.path = os.path.join(*model_path)
 
     def download(self):
+        """Download model defined in self"""
         pass
 
     def delete(self):
+        """Delete model defined in self"""
         logging.info(f'Finding {self.path} folder')
 
         if os.path.exists(self.path):
@@ -30,6 +43,7 @@ class Downloader:
             logging.warning(f'Did not found folder at path "{self.path}"')
 
     def setup_folder(self, model_name: str = None) -> str:
+        """Setup models/Piper folder (downloads config from hugging face, creates directories)"""
         self.check_and_create_dir(self.models_path)
 
         model_dir = os.path.join(self.models_path, self.model)
@@ -44,29 +58,35 @@ class Downloader:
 
     @staticmethod
     def check_and_create_dir(dir_name):
+        """Helper function to create folder if not exists"""
         if not os.path.exists(dir_name):
             logging.info(f'Creating {dir_name} directory')
             os.mkdir(dir_name)
 
 
 class FreeVC24Downloader(Downloader):
+    """FreeVC24 model downloader & deleter"""
+
     def __init__(self):
         self.vc_location = [self.home, '.local', 'share', 'tts', 'voice_conversion_models--multilingual--vctk--freevc24']
         super().__init__('FreeVC24', self.vc_location)
 
     def download(self):
+        """Download FreeVC24 model via Coqui-tts library API"""
         logging.info(f'Downloading {self.model} model')
         TTS().download_model_by_name('voice_conversion_models/multilingual/vctk/freevc24')
         logging.info(f'Successfully downloaded {self.model}')
 
 
 class PiperDownloader(Downloader):
+    """Piper models downloader & deleter"""
     def __init__(self, model: str):
         self.model_name = model
         self.tts_location = [os.path.dirname(self.cwd), 'models', 'Piper', model]
         super().__init__('Piper', self.tts_location)
 
     def get_model_info(self) -> dict:
+        """Provides all info about model from config file"""
         piper_dir = self.setup_folder()
 
         config_path = os.path.join(piper_dir, 'voices.json')
@@ -92,11 +112,21 @@ class PiperDownloader(Downloader):
         return config[self.model_name]
 
     def download(self):
+        """Download and configure Piper model from official `rhasspy/piper-voices` hugging face"""
         model_dir = self.setup_folder(self.model_name)
 
         model_info = self.get_model_info()
 
+        downloaded_md5 = dict()
+        for downloaded in os.listdir(model_dir):
+            downloaded_md5[downloaded] = calculate_md5(os.path.join(model_dir, downloaded))
+
         for file, file_desc in model_info['files'].items():
+
+            if any(file.endswith(downloaded_file) and file_desc['md5_digest'] == md5 for downloaded_file, md5 in downloaded_md5.items()):
+                logging.info(f'File {file} already exists in {model_dir}, skipping')
+                continue
+
             logging.info(f'Downloading {file} (size {file_desc["size_bytes"]} bytes)')
             hf_hub_download(
                 repo_id="rhasspy/piper-voices",
@@ -111,6 +141,10 @@ class PiperDownloader(Downloader):
             for file in files:
                 current_path = os.path.join(path, file)
                 new_path = os.path.join(model_dir, file)
+
+                if current_path == new_path:
+                    continue
+
                 logging.info(f'Initialized new path for {file}')
                 shutil.move(current_path, new_path)
                 logging.info(f'Moved file {current_path} to {new_path}')

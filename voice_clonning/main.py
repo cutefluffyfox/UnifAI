@@ -1,38 +1,40 @@
+# python build-in libraries
 import logging
 
+# downloadable library to play audio files
+from playsound import playsound
+
+# all voice-cloning related libraries
 from downloader import PiperDownloader, FreeVC24Downloader
 from vc import VoiceCloningModel
 from piper import Piper
 
-voice_sample = '../sandbox/voice/rus_ai.ogg'
 
-# lang = 'en-us'
-# text = "Good morning china. now i have ice cream i love ice cream. But 'Fast and Furious 9' is better than ice cream"
-
-lang = 'de'
-text = 'Guten Morgen, China. Jetzt habe ich Eis, ich liebe Eis. Aber „Fast and Furious 9“ ist besser als Eis'
-
-# lang = 'ru'
-# text = 'Доброе утро китай. теперь у меня есть мороженое, я люблю мороженое. Но «Форсаж 9» лучше мороженого'
-
-# lang = 'zh-CN'
-# text = '早上好中国. 现在我有冰激淋 我很喜欢冰激淋. 但是《速度与激情9》比冰激淋'
-
-
+# Configure logging
 FORMAT = '%(asctime)s : %(message)s'
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
-piper = PiperDownloader('de_DE-thorsten-medium')
-piper.download()
 
-FreeVC24Downloader().download()
+# Define all required key variables
+speech_speed = 1.2
+voice_sample = '../sandbox/voice/rus_ai.ogg'
+output_file = 'tts-sts.wav'
+model = 'en_US-libritts-high'
+text = "Good morning china. now i have ice cream i love ice cream. But 'Fast and Furious 9' is better than ice cream"
 
-piper = Piper('de_DE-thorsten-medium')
-piper.synthesize_and_save(
-    text,
-    output_file='piper.wav',
-    length_scale=1.5
-)
 
+# Define all models
+piper = Piper(model, use_cuda='auto')
 vc = VoiceCloningModel()
-vc.synthesise('piper.wav', voice_path=voice_sample)
+
+
+# Download models
+FreeVC24Downloader().download()
+PiperDownloader(model).download()
+
+
+# Full pipeline
+piper.synthesize_and_save(text, output_file=output_file, length_scale=speech_speed)
+vc.synthesise_and_save(speech_path=output_file, voice_path=voice_sample, output_file=output_file)
+playsound(output_file)
+

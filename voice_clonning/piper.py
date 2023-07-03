@@ -10,8 +10,10 @@ import wave
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Mapping, Optional, Sequence, Union
-from downloader import Downloader
 
+import torch.cuda
+
+from downloader import Downloader
 
 import numpy as np
 import onnxruntime
@@ -37,9 +39,12 @@ class PiperConfig:
 
 
 class Piper:
-    def __init__(self, model: str, use_cuda: bool = False):
+    def __init__(self, model: str, use_cuda: Union[bool, str] = 'auto'):
         model_path = os.path.join(Downloader.models_path, 'Piper', model, model + '.onnx')
         config_path = f"{model_path}.json"
+
+        if use_cuda == 'auto':
+            use_cuda = torch.cuda.is_available()
 
         self.config = load_config(config_path)
         self.phonemizer = Phonemizer(self.config.espeak_voice)
@@ -54,12 +59,12 @@ class Piper:
     def synthesize(
         self,
         text: str,
-        speaker_id: Optional[int] = None,
+        speaker_id: Optional[int] = 0,
         length_scale: Optional[float] = None,
         noise_scale: Optional[float] = None,
         noise_w: Optional[float] = None,
     ) -> bytes:
-        """Synthesize WAV audio from text."""
+        """Synthesize WAV audio from text"""
         if length_scale is None:
             length_scale = self.config.length_scale
 
@@ -118,11 +123,6 @@ class Piper:
 
             return wav_io.getvalue()
 
-    def synthesize_and_play(self, text: str, **kwargs):
-        """Just decorator for synthesize function and playing audio"""
-        wav = self.synthesize(text, **kwargs)
-        sys.stdout.buffer.write(wav)
-
     def synthesize_and_save(self, text: str, output_file: str, **kwargs):
         """Just decorator for synthesize function and saving it to file"""
         wav = self.synthesize(text, **kwargs)
@@ -131,6 +131,7 @@ class Piper:
 
 
 def load_config(config_path: Union[str, Path]) -> PiperConfig:
+    """Loads model config file & parse all required info"""
     with open(config_path, "r", encoding="utf-8") as config_file:
         config_dict = json.load(config_file)
         inference = config_dict.get("inference", {})
