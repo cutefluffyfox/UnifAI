@@ -46,6 +46,10 @@ class Piper:
         if use_cuda == 'auto':
             use_cuda = torch.cuda.is_available()
 
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f'Model {model} is not downloaded yet, please download it '
+                                    f'first by PiperDownloader class')
+
         self.config = load_config(config_path)
         self.phonemizer = Phonemizer(self.config.espeak_voice)
         self.model = onnxruntime.InferenceSession(

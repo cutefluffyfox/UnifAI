@@ -85,6 +85,14 @@ class PiperDownloader(Downloader):
         self.tts_location = [os.path.dirname(self.cwd), 'models', 'Piper', model]
         super().__init__('Piper', self.tts_location)
 
+    @staticmethod
+    def get_available_models():
+        """Provides all models that are available for user to download"""
+        available_path = os.path.join(Downloader.cwd, 'available_models.txt')
+        with open(available_path, 'r', encoding='UTF-8') as file:
+            models = file.read().splitlines()
+        return models
+
     def get_model_info(self) -> dict:
         """Provides all info about model from config file"""
         piper_dir = self.setup_folder()
@@ -113,6 +121,12 @@ class PiperDownloader(Downloader):
 
     def download(self):
         """Download and configure Piper model from official `rhasspy/piper-voices` hugging face"""
+        available = self.get_available_models()
+        if self.model_name not in available:
+            logging.warning(f'Tried to download unexciting/non-licenced model {self.model_name}')
+            raise RuntimeError(f'Tried to download unsupported model `{self.model_name}`. '
+                               f'Please check list of all available models via PiperDownloader.get_available_models()')
+
         model_dir = self.setup_folder(self.model_name)
 
         model_info = self.get_model_info()

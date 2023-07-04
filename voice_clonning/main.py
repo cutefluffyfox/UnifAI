@@ -23,18 +23,18 @@ model = 'en_US-libritts-high'
 text = "Good morning china. now i have ice cream i love ice cream. But 'Fast and Furious 9' is better than ice cream"
 
 
-# Define all models
-piper = Piper(model, use_cuda='auto')
-vc = VoiceCloningModel()
-
-
 # Download models
 FreeVC24Downloader().download()
 PiperDownloader(model).download()
 
 
+# Define all models (after downloading)
+piper = Piper(model, use_cuda='auto')
+vc = VoiceCloningModel()
+
+
 # Full pipeline
 piper.synthesize_and_save(text, output_file=output_file, length_scale=speech_speed)
 vc.synthesise_and_save(speech_path=output_file, voice_path=voice_sample, output_file=output_file)
-playsound(output_file)
+# playsound(output_file)
 
