@@ -7,6 +7,8 @@ import (
   "github.com/jackc/pgx/v5"
 )
 
+const MAX_AUDIO_SIZE = 2 << 20 // 2 MiB
+
 func Connect() *pgx.Conn {
   conn, err := pgx.Connect(context.Background(), os.Getenv("DB_URL"))
   if err != nil {
@@ -24,11 +26,12 @@ func Migrate(c *pgx.Conn) {
 }
 
 func CreateUserTable(c *pgx.Conn) {
-  req := `drop table if exists "users";
+  req := `drop table if exists "users" cascade;
 	CREATE TABLE IF NOT EXISTS "users" (
 		"id" serial PRIMARY KEY, 
 		"username" varchar UNIQUE,
-		"passhash" varchar )`
+		"passhash" varchar,
+		"audio" bytea)`
 
   if _, err := c.Exec(context.Background(), req); err != nil {
     fmt.Fprintf(os.Stderr, "Could not create users table: %v\n", err)
@@ -39,7 +42,7 @@ func CreateUserTable(c *pgx.Conn) {
 }
 
 func CreateRoomsTable(c *pgx.Conn) {
-	req := `drop table is exists "rooms"; 
+	req := `drop table if exists "rooms" cascade; 
 		CREATE TABLE IF NOT EXISTS "rooms" (
 			"id" serial PRIMARY KEY,
 			"name" varchar,

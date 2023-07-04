@@ -1,0 +1,243 @@
+basePath: /api/v1
+definitions:
+  controller.Message:
+    properties:
+      message:
+        type: string
+    type: object
+  entity.User:
+    properties:
+      id:
+        type: integer
+      passhash:
+        type: string
+      username:
+        type: string
+    required:
+    - passhash
+    - username
+    type: object
+  entity.UserDetails:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  httputil.HTTPError:
+    properties:
+      code:
+        example: 400
+        type: integer
+      message:
+        example: status bad request
+        type: string
+    type: object
+  service.TokenDetails:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: WIP UnifAI API
+  title: UnifAI API
+  version: 0.1.0
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Obtain token pairs with username and plaintext password
+      parameters:
+      - description: Username
+        in: body
+        name: userDetails
+        required: true
+        schema:
+          $ref: '#/definitions/entity.UserDetails'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TokenDetails'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      summary: Log into existing user account
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      description: Obtain token pair with valid refresh token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TokenDetails'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerRefresh: []
+      summary: Refresh token pair
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register new user with username and plaintext password
+      parameters:
+      - description: Username
+        in: body
+        name: userDetails
+        required: true
+        schema:
+          $ref: '#/definitions/entity.UserDetails'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TokenDetails'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      summary: Register new user
+      tags:
+      - auth
+  /user/audio:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Register new user with username and plaintext password
+      parameters:
+      - description: Audio recording
+        in: formData
+        name: audio
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerAccess: []
+      summary: Upload voice recording for current user
+      tags:
+      - user
+  /user/audio/{id}:
+    get:
+      description: Register new user with username and plaintext password
+      parameters:
+      - description: User id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - multipart/form-data
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerAccess: []
+      summary: Get voice recording for user
+      tags:
+      - user
+  /user/me:
+    get:
+      description: Get id, username and password hash for logged in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerAccess: []
+      summary: 'DEBUG ONLY: Get user info'
+      tags:
+      - user
+securityDefinitions:
+  BearerAccess:
+    description: Type "Bearer" followed by a space and JWT Acess token.
+    in: header
+    name: Authorization
+    type: apiKey
+  BearerRefresh:
+    description: Type "Bearer" followed by a space and JWT Refresh token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

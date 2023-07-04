@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unifai/httputil"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid"
@@ -84,21 +85,21 @@ func TokenAuthMiddleware(tokenType string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		tstr, err := ExtractToken(ctx.Request)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, err.Error())
+			httputil.NewError(ctx, http.StatusUnauthorized, err)
 			ctx.Abort()
 			return
 		}
 
 		tok, err := ParseToken(tstr)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, err.Error())
+			httputil.NewError(ctx, http.StatusUnauthorized, err)
 			ctx.Abort()
 			return
 		}
 		
 		claims, ok := tok.Claims.(*TokenClaims)
 		if !ok {
-			ctx.JSON(http.StatusUnauthorized, jwt.ErrTokenInvalidClaims.Error())
+			httputil.NewError(ctx, http.StatusUnauthorized, jwt.ErrTokenInvalidClaims)
 			ctx.Abort()
 			return
 		}
