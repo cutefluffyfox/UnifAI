@@ -4,6 +4,7 @@ import multiprocessing
 import json
 import uvicorn
 import asyncio
+import uuid
 
 import tempfile
 from typing import Dict
@@ -15,10 +16,14 @@ app = FastAPI()
 class ConnectionManager:
     def __init__(self):
         self.active_connections: list[WebSocket] = []
+        self.users: Dict = {}
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
+        result = {'action': 'getUid', 'uid': str(uuid.uuid4())}
+
+        await websocket.send_text(json.dumps(result))
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
@@ -27,7 +32,7 @@ class ConnectionManager:
     async def send_translated_message(data, websocket: WebSocket):
         target_languages = {}
         data = json.loads(data)
-        result = {'translation': data['text']}
+        result = {'action': 'synthesis', 'translation': data['text'], 'sender_uid': data['uid']}
         await websocket.send_text(json.dumps(result))
 
 
@@ -41,8 +46,8 @@ def process_sample_data(file: tempfile.SpooledTemporaryFile):
     pass
 
 
-@app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: int):
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:

@@ -16,6 +16,8 @@ uvicorn = "^0.20.0"
 fastapi = "^0.96.0"
 PyAudio = "^0.2.13"
 
+[tool.setuptools]
+py-modules = []
 
 [build-system]
 requires = ["poetry-core"]
