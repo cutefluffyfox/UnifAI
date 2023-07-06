@@ -45,6 +45,7 @@ func CreateRoomsTable(c *pgx.Conn) {
 	req := `drop table if exists "rooms" cascade; 
 		CREATE TABLE IF NOT EXISTS "rooms" (
 			"id" serial PRIMARY KEY,
+			"admin_id" integer references users(id),
 			"name" varchar,
 			"description" varchar)`
 

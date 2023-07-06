@@ -16,7 +16,7 @@ import (
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
-//	@Param			userDetails	body	entity.UserDetails	true	"Username"
+//	@Param			userDetails	body		entity.UserDetails	true	"Username"
 //	@Success		200			{object}	service.TokenDetails
 //	@Failure		400			{object}	httputil.HTTPError
 //	@Failure		500			{object}	httputil.HTTPError
@@ -96,9 +96,9 @@ func (c *Controller) Login(ctx *gin.Context) {
 //	@Description	Obtain token pair with valid refresh token
 //	@Tags			auth
 //	@Produce		json
-//	@Success		200			{object}	service.TokenDetails
-//	@Failure		401			{object}	httputil.HTTPError
-//	@Failure		500			{object}	httputil.HTTPError
+//	@Success		200	{object}	service.TokenDetails
+//	@Failure		401	{object}	httputil.HTTPError
+//	@Failure		500	{object}	httputil.HTTPError
 //	@Security		BearerRefresh
 //	@Router			/auth/refresh [post]
 func (c *Controller) Refresh(ctx *gin.Context) {

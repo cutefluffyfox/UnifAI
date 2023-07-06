@@ -6,6 +6,7 @@
     import (fetchTree nixpkgs.locked) {
       overlays = [
         (import "${fetchTree gomod2nix.locked}/overlay.nix")
+        (import "./overlay.nix")
       ];
     }
   )

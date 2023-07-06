@@ -5,6 +5,28 @@ definitions:
       message:
         type: string
     type: object
+  controller.RoomCreation:
+    properties:
+      admin_id:
+        type: integer
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  entity.Room:
+    properties:
+      admin_id:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   entity.User:
     properties:
       id:
@@ -137,6 +159,133 @@ paths:
       summary: Register new user
       tags:
       - auth
+  /room/{id}/join:
+    get:
+      description: Join the room with given id
+      parameters:
+      - description: Room id
+        in: path
+        name: roomId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerAccess: []
+      summary: Join a room
+      tags:
+      - rooms
+  /room/{id}/leave:
+    get:
+      description: Leave the room with given ID
+      parameters:
+      - description: Room id
+        in: path
+        name: roomId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerAccess: []
+      summary: Leave a room
+      tags:
+      - rooms
+  /room/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new room with given name, description and owner
+      parameters:
+      - description: Room details
+        in: body
+        name: details
+        required: true
+        schema:
+          $ref: '#/definitions/controller.RoomCreation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerAccess: []
+      summary: Create a new room
+      tags:
+      - rooms
+  /room/list:
+    get:
+      description: Get all rooms that current user is a member of
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/entity.Room'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerAccess: []
+      summary: List current user's rooms
+      tags:
+      - rooms
   /user/audio:
     post:
       consumes:

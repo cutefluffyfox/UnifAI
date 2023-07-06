@@ -63,7 +63,13 @@ func main() {
 		room := v1.Group("/room")
 		{
 			room.Use(service.TokenAuthMiddleware("access"))
-			room.POST("/join")
+			actions := room.Group(":id")
+			{
+				actions.GET("/join", c.JoinRoom)
+				actions.GET("/leave", c.LeaveRoom)
+			}
+			room.POST("/create", c.CreateRoom)
+			room.GET("/list", c.ListRooms)
 			room.GET("/connect")
 		}
 	}
