@@ -55,7 +55,7 @@ type RoomCreation struct {
 //	@Description	Join the room with given id
 //	@Tags			rooms
 //	@Produce		json
-//	@Param			roomId	path		int	true	"Room id"
+//	@Param			id	path		int	true	"Room id"
 //	@Success		200		{object}	controller.Message
 //	@Failure		400		{object}	httputil.HTTPError
 //	@Failure		401		{object}	httputil.HTTPError
@@ -86,7 +86,7 @@ func (c *Controller) JoinRoom(ctx *gin.Context) {
 //	@Description	Leave the room with given ID
 //	@Tags			rooms
 //	@Produce		json
-//	@Param			roomId	path		int	true	"Room id"
+//	@Param			id	path		int	true	"Room id"
 //	@Success		200		{object}	controller.Message
 //	@Failure		400		{object}	httputil.HTTPError
 //	@Failure		401		{object}	httputil.HTTPError

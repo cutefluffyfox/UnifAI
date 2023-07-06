@@ -165,7 +165,7 @@ paths:
       parameters:
       - description: Room id
         in: path
-        name: roomId
+        name: id
         required: true
         type: integer
       produces:
@@ -198,7 +198,7 @@ paths:
       parameters:
       - description: Room id
         in: path
-        name: roomId
+        name: id
         required: true
         type: integer
       produces:
