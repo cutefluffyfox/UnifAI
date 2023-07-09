@@ -36,14 +36,14 @@ func (c *Controller) Register(ctx *gin.Context) {
 	}
 
 	var u entity.User = entity.User{Username: ud.Username, PasswordHashed: hash}
-	id, err := service.RegisterUser(u)
+	usr, err := c.Store.CreateUser(u)
 
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	td, err := service.CreateTokenPair(id)
+	td, err := service.CreateTokenPair(usr.Id)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 		return
@@ -71,7 +71,7 @@ func (c *Controller) Login(ctx *gin.Context) {
 		return
 	}
 
-	user, err := service.FindUserByUsername(ud.Username)
+	user, err := c.Store.GetUserByName(ud.Username)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusUnauthorized, err)
 		return

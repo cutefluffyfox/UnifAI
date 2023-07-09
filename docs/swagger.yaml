@@ -29,15 +29,14 @@ definitions:
     type: object
   entity.User:
     properties:
+      audio_last_updated:
+        type: string
       id:
         type: integer
-      passhash:
+      password_hash:
         type: string
       username:
         type: string
-    required:
-    - passhash
-    - username
     type: object
   entity.UserDetails:
     properties:
@@ -159,6 +158,45 @@ paths:
       summary: Register new user
       tags:
       - auth
+  /room/{id}/connect:
+    get:
+      description: Initiate websocket connection with given room id and preferred
+        language
+      parameters:
+      - description: Room id
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Preferred language
+        in: query
+        name: lang
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.HTTPError'
+      security:
+      - BearerAccess: []
+      summary: Connect to a room
+      tags:
+      - rooms
   /room/{id}/join:
     get:
       description: Join the room with given id

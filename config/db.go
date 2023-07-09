@@ -9,6 +9,7 @@ import (
 
 const MAX_AUDIO_SIZE = 2 << 20 // 2 MiB
 
+
 func Connect() *pgx.Conn {
   conn, err := pgx.Connect(context.Background(), os.Getenv("DB_URL"))
   if err != nil {
@@ -31,7 +32,8 @@ func CreateUserTable(c *pgx.Conn) {
 		"id" serial PRIMARY KEY, 
 		"username" varchar UNIQUE,
 		"passhash" varchar,
-		"audio" bytea)`
+		"audio" bytea,
+		"last_update" timestamp)`
 
   if _, err := c.Exec(context.Background(), req); err != nil {
     fmt.Fprintf(os.Stderr, "Could not create users table: %v\n", err)

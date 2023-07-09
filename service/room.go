@@ -3,95 +3,74 @@ package service
 import (
 	"context"
 	"errors"
-	"unifai/config"
 	"unifai/entity"
 )
 
-// type RoomService interface {
-// 	NewRoom(entity.Room) error
-// 	DeleteRoom(int) error
-// 	FindRoomById(int) (entity.Room, error)
-//
-// 	JoinRoom(int, int) error
-// 	LeaveRoom(int, int) error
-// }
-//
-// type roomService struct{}
-//
-// func NewRoomService(c *pgx.Conn) RoomService {
-// 	config.CreateRoomsTable(c)
-// 	config.CreateRoomsUsersRelation(c)
-// 	return roomService{}
-// }
 
-func DeleteRoom(roomId int, userId int) error {
-	room, err := FindRoomById(roomId)
-	if err != nil {
-		return err
-	}
-
-	if userId != room.AdminId {
-		return errors.New("Only admin can delete a rooms")
-	}
-
-	req := "delete from rooms_users where room_id = $1; delete from rooms where id = $1"
-	conn := config.Connect()
-	_, err = conn.Exec(context.Background(), req, roomId)
-	return err
-}
-
-func FindRoomById(roomId int) (entity.Room, error) {
-	req := "select * from rooms where id = $1"
-	conn := config.Connect()
+func (store *Datastore) CreateRoom(room entity.Room) (*entity.Room, error) {
+	req := `INSERT INTO rooms(name, description, admin_id)
+					VALUES ($1, $2, $3) RETURNING id, name, description, admin_id`
+	
+	row := store.pool.QueryRow(context.Background(), req, room.Name, room.Description, room.AdminId)
 
 	var r entity.Room
-	if err := conn.QueryRow(context.Background(), req, roomId).Scan(&r); err != nil {
-		return entity.Room{}, err
+	if err := row.Scan(&r.Id, &r.Name, &r.Description, &r.AdminId); err != nil {
+		return nil, err
 	}
-	return r, nil
+
+	return &r, nil
 }
 
-func GetParticipants(roomId int) ([]int, error) {
-	req := "select user_id from rooms_users where room_id = $1"
-	conn := config.Connect()
+func (store *Datastore) GetRoom(id int) (*entity.Room, error) {
+	req := `SELECT id, name, description, admin_id
+					FROM rooms WHERE id = $1`
+	
+	row := store.pool.QueryRow(context.Background(), req, id)
 
-	rows, err := conn.Query(context.Background(), req, roomId)
+	var r entity.Room
+	if err := row.Scan(&r.Id, &r.Name, &r.Description, &r.AdminId); err != nil {
+		return nil, err
+	}
+
+	return &r, nil
+}
+
+func (store *Datastore) GetRoomParticipants(roomId int) ([]entity.User, error) {
+	req := `SELECT u.id, u.username, u.last_update
+					FROM rooms_users ru JOIN users u ON ru.user_id = u.id
+					WHERE ru.room_id = $1`
+
+	rows, err := store.pool.Query(context.Background(), req, roomId)
 	if err != nil {
 		return nil, err
 	}
 
-	var ids []int
+	var users []entity.User
 	for rows.Next() {
-		var id int
-		if err := rows.Scan(&id); err != nil {
+		var u entity.User
+		if err := rows.Scan(&u.Id, &u.Username, &u.AudioLastUpdated); err != nil {
 			return nil, err
 		}
-		ids = append(ids, id)
+		users = append(users, u)
 	}
 
-	return ids, nil
+	return users, nil
 }
 
-func JoinRoom(roomId int, userId int) error {
-	req := "insert into rooms_users(user_id, room_id) values($1, $2)"
-	conn := config.Connect()
-
-	_, err := conn.Exec(context.Background(), req, userId, roomId)
-	return err
-}
-
-func ListRooms(userId int) ([]entity.Room, error) {
-	req := "select distinct room_id, admin_id, name, description from rooms_users ru join rooms r on ru.room_id = r.id where ru.user_id = $1"
-	conn := config.Connect()
-
-	rows, err := conn.Query(context.Background(), req, userId)
+func (store *Datastore) GetUserRooms(userId int) ([]entity.Room, error) {
+	req := `SELECT DISTINCT r.id, r.name, r.description, r.admin_id 
+					FROM rooms_users ru 
+						JOIN rooms r ON ru.room_id = r.id
+					WHERE ru.user_id = $1`
+	rows, err := store.pool.Query(context.Background(), req, userId)
 	if err != nil {
 		return nil, err
 	}
+
 	var rooms []entity.Room
 	for rows.Next() {
 		var r entity.Room
-		err := rows.Scan(&r)
+		err := rows.Scan(&r.Id, &r.Name, &r.Description, &r.AdminId)
 		if err != nil {
 			return nil, err
 		}
@@ -101,32 +80,54 @@ func ListRooms(userId int) ([]entity.Room, error) {
 	return rooms, nil
 }
 
-func LeaveRoom(roomId int, userId int) error {
-	room, err := FindRoomById(roomId)
-	if err != nil {
-		return err
+func (store *Datastore) UpdateRoom(r entity.Room) (*entity.Room, error) {
+	req := `UPDATE rooms SET 
+						name = $2
+						description = $3
+						admin_id = $4
+					WHERE id = $1 RETURNING id, name, description, admin_id`
+	
+	row := store.pool.QueryRow(context.Background(), req, r.Id, r.Name, r.Description, r.AdminId)
+	var room entity.Room
+	if err := row.Scan(&room.Id, &room.Name, &room.Description, &room.AdminId); err != nil {
+		return nil, err
 	}
+	return &room, nil
+}
 
-	if userId == room.AdminId {
-		return errors.New("Admin cannot leave a room without deleting it")
-	}
-
-	req := "delete from rooms_users where room_id = $1, user_id = $2"
-	conn := config.Connect()
-
-	_, err = conn.Exec(context.Background(), req, userId, roomId)
+func (store *Datastore) UpdateRoomJoin(roomId int, userId int) error {
+	req := `INSERT INTO rooms_users(room_id, user_id) 
+					VALUES($1, $2)`
+	
+	_, err := store.pool.Exec(context.Background(), req, roomId, userId)
 	return err
 }
 
-func NewRoom(room entity.Room) (int, error) {
-	req := "insert into rooms(name, description, admin_id) values($1, $2, $3) returning id"
-	conn := config.Connect()
-
-	var id int
-	if err := conn.QueryRow(context.Background(), req, room.Name, room.Description, room.AdminId).Scan(&id); err != nil {
-		return -1, err
+func (store *Datastore) UpdateRoomLeave(roomId int, userId int) error {
+	room, err := store.GetRoom(roomId)
+	if err != nil {
+		return err
+	}
+	if room.AdminId == userId {
+		return errors.New("Admin cannot leave a room, only delete it.")
 	}
 
-	return id, nil
+	req := `DELETE FROM rooms_users where room_id = $1, user_id = $2`
+	_, err = store.pool.Exec(context.Background(), req, roomId, userId)
+	return err
+}
+
+func (store *Datastore) DeleteRoom(roomId int) (*entity.Room, error) {
+	req := `DELETE FROM rooms_users WHERE room_id = $1;
+					DELETE FROM roooms WHERE id = $1
+					RETURNING id, name, description, admin_id`
+
+	row := store.pool.QueryRow(context.Background(), req, roomId)
+	var r entity.Room
+	if err := row.Scan(&r.Id, &r.Name, &r.Description, &r.AdminId); err != nil {
+		return nil, err
+	}
+
+	return &r, nil
 }
 

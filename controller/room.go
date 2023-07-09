@@ -2,12 +2,14 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 	"unifai/entity"
 	"unifai/httputil"
-	"unifai/service"
-	"strconv"
+	"unifai/ws"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/text/language"
 )
 
 // CreateRoom godoc
@@ -34,13 +36,19 @@ func (c *Controller) CreateRoom(ctx *gin.Context) {
 		rd.AdminId = ctx.GetInt("user_id")
 	}
 
-	rid, err := service.NewRoom(entity.Room{})
+	room, err := c.Store.CreateRoom(entity.Room{Name: rd.Name, Description: rd.Description, AdminId: rd.AdminId})
+	if err != nil {
+		httputil.NewError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+	uid := ctx.GetInt("user_id")
+	err = c.Store.UpdateRoomJoin(room.Id, uid)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, Message{Message: "Created room with ID: " + strconv.Itoa(rid)})
+	ctx.JSON(http.StatusOK, Message{Message: "Created room with ID: " + strconv.Itoa(room.Id)})
 }
 
 type RoomCreation struct {
@@ -63,7 +71,8 @@ type RoomCreation struct {
 //	@Security		BearerAccess
 //	@Router			/room/{id}/join [get]
 func (c *Controller) JoinRoom(ctx *gin.Context) {
-	roomId, err := strconv.Atoi(ctx.Param("roomId"))
+	par := ctx.Param("id") // has slashes on beginning and end
+	roomId, err := strconv.Atoi(strings.ReplaceAll(par, "//", ""))
 
 	if err != nil {
 		httputil.NewError(ctx, http.StatusBadRequest, err)
@@ -71,7 +80,7 @@ func (c *Controller) JoinRoom(ctx *gin.Context) {
 	}
 
 	userId := ctx.GetInt("user_id")
-	err = service.JoinRoom(roomId, userId)
+	err = c.Store.UpdateRoomJoin(roomId, userId)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 		return
@@ -94,7 +103,8 @@ func (c *Controller) JoinRoom(ctx *gin.Context) {
 //	@Security		BearerAccess
 //	@Router			/room/{id}/leave [get]
 func (c *Controller) LeaveRoom(ctx *gin.Context) {
-	roomId, err := strconv.Atoi(ctx.Param("roomId"))
+	par := ctx.Param("id") // has slashes on beginning and end
+	roomId, err := strconv.Atoi(strings.ReplaceAll(par, "//", ""))
 
 	if err != nil {
 		httputil.NewError(ctx, http.StatusBadRequest, err)
@@ -102,13 +112,72 @@ func (c *Controller) LeaveRoom(ctx *gin.Context) {
 	}
 
 	userId := ctx.GetInt("user_id")
-	err = service.LeaveRoom(roomId, userId)
+	err = c.Store.UpdateRoomLeave(roomId, userId)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, Message{Message: "Left room successfully"})
+}
+
+// RoomConnect godoc
+//
+//	@Summary		Connect to a room
+//	@Description	Initiate websocket connection with given room id and preferred language
+//	@Tags			rooms
+//	@Produce		json
+//	@Param			id	path		int	true	"Room id"
+//	@Param			lang	query		string	true	"Preferred language"
+//	@Success		200		{object}	controller.Message
+//	@Failure		400		{object}	httputil.HTTPError
+//	@Failure		401		{object}	httputil.HTTPError
+//	@Failure		500		{object}	httputil.HTTPError
+//	@Security		BearerAccess
+//	@Router			/room/{id}/connect [get]
+func (c *Controller) RoomConnect(ctx *gin.Context) {
+	par := ctx.Param("roomId") // has slashes on beginning and end
+	roomId, err := strconv.Atoi(strings.ReplaceAll(par, "//", ""))
+
+	if err != nil {
+		httputil.NewError(ctx, http.StatusBadRequest, err)
+		return
+	}
+
+	langStr := ctx.Request.URL.Query().Get("lang")
+	lang, err := language.Parse(langStr)
+	if err != nil {
+		httputil.NewError(ctx, http.StatusBadRequest, err)
+		return
+	}
+
+	clients, err := c.Store.GetRoomParticipants(roomId)
+	if err != nil {
+		httputil.NewError(ctx, http.StatusBadRequest, err) // Room probably does not exist or DB is down
+		return
+	}
+	
+	userId := ctx.GetInt("user_id")
+	currentUser, err := c.Store.GetUserById(userId)
+	if err != nil {
+		httputil.NewError(ctx, http.StatusInternalServerError, err) // Room probably does not exist or DB is down
+		return
+	}
+
+	var userData []ws.WsClientData
+	for _, u := range clients {
+		userData = append(userData, ws.WsClientData{Id: u.Id, LastUpdate: u.AudioLastUpdated})
+	}
+
+
+	clientInfo := ws.Client{
+		UserId: userId,
+		RoomId: roomId,
+		Name: currentUser.Username,
+		PreferredLang: lang,
+	}
+
+	ws.ServeWs(c.Hub, clientInfo, ctx.Writer, ctx.Request, userData...)
 }
 
 // ListRooms godoc
@@ -124,7 +193,7 @@ func (c *Controller) LeaveRoom(ctx *gin.Context) {
 //	@Router			/room/list [get]
 func (c *Controller) ListRooms(ctx *gin.Context) {
 	userId := ctx.GetInt("user_id")
-	rooms, err := service.ListRooms(userId)
+	rooms, err := c.Store.GetUserRooms(userId)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 	}
@@ -132,5 +201,3 @@ func (c *Controller) ListRooms(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, rooms)
 }
 
-func (c *Controller) ConnectRoom(ctx *gin.Context) {
-}

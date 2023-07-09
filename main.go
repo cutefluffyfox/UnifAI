@@ -5,6 +5,7 @@ import (
 	"unifai/config"
 	"unifai/controller"
 	"unifai/service"
+	"unifai/ws"
 	_ "unifai/docs"
 
 	"github.com/gin-gonic/gin"
@@ -36,9 +37,17 @@ func main() {
 	}
 	config.Migrate(config.Connect())
 
+	pool, err := service.NewDBPool()
+	if err != nil {
+		log.Fatalf("Could not connect to database:%v\n", err)
+		return
+	}
+	ds := service.NewDatastore(pool)
+	hub := ws.Hub{}
+	c := controller.NewController(&ds, &hub)
+
 	r := gin.Default()
 	r.MaxMultipartMemory = config.MAX_AUDIO_SIZE
-	c := controller.NewController()
 
 	v1 := r.Group("/api/v1")
 	{
@@ -67,10 +76,10 @@ func main() {
 			{
 				actions.GET("/join", c.JoinRoom)
 				actions.GET("/leave", c.LeaveRoom)
+				actions.GET("/connect")
 			}
 			room.POST("/create", c.CreateRoom)
 			room.GET("/list", c.ListRooms)
-			room.GET("/connect")
 		}
 	}
 	r.StaticFile("/docs/swagger.json", "./docs/swagger.json")

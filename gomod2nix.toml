@@ -49,6 +49,9 @@ schema = 3
   [mod."github.com/golang-jwt/jwt/v5"]
     version = "v5.0.0"
     hash = "sha256-eJhOeyjkEwQAN9cwwAIU4RqnbzHmbDYW27/EzcKgj9Q="
+  [mod."github.com/gorilla/websocket"]
+    version = "v1.5.0"
+    hash = "sha256-EYVgkSEMo4HaVrsWKqnsYRp8SSS8gNf7t+Elva02Ofc="
   [mod."github.com/jackc/pgpassfile"]
     version = "v1.0.0"
     hash = "sha256-H0nFbC34/3pZUFnuiQk9W7yvAMh6qJDrqvHp+akBPLM="
@@ -58,6 +61,9 @@ schema = 3
   [mod."github.com/jackc/pgx/v5"]
     version = "v5.4.1"
     hash = "sha256-F7rxrYBFFOUZIz5v80MG73bFrilRey9VYFeqkB8lcXY="
+  [mod."github.com/jackc/puddle/v2"]
+    version = "v2.2.0"
+    hash = "sha256-S9Ldac+a4auQt99hToXZ/WSuUhcEk/A5aDgQAb48B8M="
   [mod."github.com/joho/godotenv"]
     version = "v1.5.1"
     hash = "sha256-kA0osKfsc6Kp+nuGTRJyXZZlJt1D/kuEazKMWYCWcQ8="
@@ -119,17 +125,20 @@ schema = 3
     version = "v0.3.0"
     hash = "sha256-Gus5o3I0+arNjRFglTP5FfCi0NDwKAUT/N3WtdhnLMQ="
   [mod."golang.org/x/crypto"]
-    version = "v0.10.0"
-    hash = "sha256-K+hdDHZM4oguyeYQAlp8Pu+BdVmo1pSIQ6jdVHdVPW0="
+    version = "v0.11.0"
+    hash = "sha256-aFI8cpvSZRiQO2HQm6+a4e9OiSf7GUfj69SSta2iZ44="
   [mod."golang.org/x/net"]
     version = "v0.11.0"
     hash = "sha256-9MWuk+lNmiiwRNLswRuIp/hhFRfYXJMrH2/Bs7iRW4M="
+  [mod."golang.org/x/sync"]
+    version = "v0.3.0"
+    hash = "sha256-bCJKLvwExhYacH2ZrWlZ38lr1d6oNenNt2m1QqDCs0o="
   [mod."golang.org/x/sys"]
-    version = "v0.9.0"
-    hash = "sha256-++MDSczD7y9yLA3isjfNpXGl66snfb45wsNixGjebU4="
-  [mod."golang.org/x/text"]
     version = "v0.10.0"
-    hash = "sha256-pt4Ce9+Bvf7f0Vo8oUZ71F1aSCcCxsx6Lg0cvanq7x8="
+    hash = "sha256-eeifyHj8IcTAruekJAGMCcjFyU2GAIAgvxS36hPZM1U="
+  [mod."golang.org/x/text"]
+    version = "v0.11.0"
+    hash = "sha256-W/XvTPAGIOlFVwZ7rTaEid7pdRtb4wc6a+nyOW99/ks="
   [mod."golang.org/x/tools"]
     version = "v0.10.0"
     hash = "sha256-9ylXC8l7/hgsIW/WMKq/5PtE6fswd2zp783Z4UO5IT4="

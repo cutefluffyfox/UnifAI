@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"unifai/config"
 	"unifai/httputil"
-	"unifai/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,14 +35,14 @@ func (c *Controller) UploadAudio(ctx *gin.Context) {
 	}
 
 	content := make([]byte, config.MAX_AUDIO_SIZE)
-	n, err := file.Read(content)
+	_, err = file.Read(content)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
 	uid := ctx.GetInt("user_id")
-	err = service.SaveAudioFile(uid, content, n)
+	_, err = c.Store.SetUserAudio(uid, content)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 		return
@@ -83,7 +82,7 @@ func (c *Controller) GetAudio(ctx *gin.Context) {
 //	@Router			/user/me [get]
 func (c *Controller) Whoami(ctx *gin.Context) {
 	uid := ctx.GetInt("user_id")
-	user, err := service.FindUserById(uid)
+	user, err := c.Store.GetUserById(uid)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 		return
