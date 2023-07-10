@@ -35,5 +35,9 @@ pkgs.mkShell {
 		swaggo
     pkgs.gomod2nix
     pkgs.httpie
+		
+		pkgs.protoc-gen-go
+		pkgs.protoc-gen-go-grpc
+		pkgs.protobuf3_20
   ];
 }

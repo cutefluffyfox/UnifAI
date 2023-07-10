@@ -1,6 +1,11 @@
 package ws
 
-import "golang.org/x/text/language"
+import (
+	"log"
+	"unifai/service"
+
+	"golang.org/x/text/language"
+)
 
 type Hub struct {
 	unregister chan *Client
@@ -9,9 +14,11 @@ type Hub struct {
 
 	clients map[*Client]bool
 	rooms   map[int][]*Client
+
+	translator *service.Translator
 }
 
-func NewHub() *Hub {
+func NewHub(t *service.Translator) *Hub {
 	return &Hub{
 		unregister: make(chan *Client),
 		register:   make(chan *Client),
@@ -19,15 +26,12 @@ func NewHub() *Hub {
 
 		clients: make(map[*Client]bool),
 		rooms:   make(map[int][]*Client),
+
+		translator: t,
 	}
 }
 
-type usersUpdateMessage struct {
-	MessageType string `json:"type"`
-	UserId int `json:"user_id"`
-}
-
-func (h *Hub) run() {
+func (h *Hub) Run() {
 	for {
 		select {
 		case cl := <- h.register:
@@ -35,7 +39,8 @@ func (h *Hub) run() {
 			h.clients[cl] = true
 			h.rooms[rid] = append(h.rooms[rid], cl)
 
-			msg := usersUpdateMessage{MessageType: "new_user", UserId: cl.UserId}
+			log.Printf("User %d joined room %d", cl.UserId, cl.RoomId)
+			msg := MessageRoomUpdate{MessageType: "new_user", UserId: cl.UserId}
 			for _, c := range h.rooms[rid] {
 				c.Out <- msg
 			}
@@ -47,7 +52,8 @@ func (h *Hub) run() {
 			}
 
 			rid := cl.RoomId
-			msg := usersUpdateMessage{MessageType: "user_left", UserId: cl.UserId}
+			log.Printf("User %d left room %d", cl.UserId, cl.RoomId)
+			msg := MessageRoomUpdate{MessageType: "user_left", UserId: cl.UserId}
 			for _, c := range h.rooms[rid] {
 				c.Out <- msg
 			}
@@ -58,8 +64,14 @@ func (h *Hub) run() {
 				if _, ok := h.clients[cl]; cl.UserId != msg.UserId && ok {
 					msgOut := &msg
 					if msg.Lang != cl.PreferredLang { // need to translate stuff
-						msgOut.Body = translate(msg.Body, msg.Lang, cl.PreferredLang)
-						msgOut.Lang = cl.PreferredLang
+						body, err := h.translator.Translate(msg.Body, msg.Lang, cl.PreferredLang)
+						if err != nil {
+							log.Printf("Translation error: %v\n", err)
+							continue
+						} else {
+							msgOut.Body = body
+							msgOut.Lang = cl.PreferredLang
+						}
 					}
 
 					select {
@@ -67,6 +79,7 @@ func (h *Hub) run() {
 					default:
 						delete(h.clients, cl)
 						close(cl.Out)
+						log.Printf("User %d left room %d: failed to recieve message", cl.UserId, cl.RoomId)
 					}
 				}
 			}

@@ -41,41 +41,6 @@ type Client struct {
 	conn *websocket.Conn
 }
 
-type ChatMessage struct {
-	UserId int 
-	RoomId int
-	Lang language.Tag 
-	Body string
-}
-
-type WsClientData struct {
-	Id int `json:"user_id"`
-	LastUpdate time.Time `json:"last_update"`
-}
-
-type WsOnboardingMessage struct {
-	MessageType string `json:"action"`
-	Users []WsClientData `json:"users"`
-}
-
-type MessageIn struct {
-	MessageType string `json:"action"`
-	Body string `json:"text"` 
-	Language string `json:"lang"` // ISO 639-1
-}
-
-type MessageOut struct {
-	MessageType string `json:"type"`
-	SenderId int `json:"sender_id"`
-	Body string `json:"text"`
-}
-
-type MessageError struct {
-	MessageType string `json:"type"`
-	ErrorType string `json:"error_type"`
-	Err error `json:"error_details"`
-}
-
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
@@ -142,7 +107,7 @@ func (c *Client) writePump() {
 }
 
 
-func ServeWs(hub *Hub, cl Client, w http.ResponseWriter, r *http.Request, usersData ...WsClientData) {
+func ServeWs(hub *Hub, cl Client, w http.ResponseWriter, r *http.Request, usersData ...WsClientDigest) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
@@ -157,5 +122,5 @@ func ServeWs(hub *Hub, cl Client, w http.ResponseWriter, r *http.Request, usersD
 	go cl.readPump()
 	go cl.writePump()
 
-	cl.conn.WriteJSON(WsOnboardingMessage{MessageType: "room_users", Users: usersData})
+	cl.conn.WriteJSON(MessageWelcome{MessageType: "room_users", Users: usersData})
 } 

@@ -164,9 +164,9 @@ func (c *Controller) RoomConnect(ctx *gin.Context) {
 		return
 	}
 
-	var userData []ws.WsClientData
+	var userData []ws.WsClientDigest
 	for _, u := range clients {
-		userData = append(userData, ws.WsClientData{Id: u.Id, LastUpdate: u.AudioLastUpdated})
+		userData = append(userData, ws.WsClientDigest{Id: u.Id, LastUpdate: u.AudioLastUpdated})
 	}
 
 

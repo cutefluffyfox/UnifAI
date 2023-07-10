@@ -17,4 +17,9 @@ pkgs.buildGoApplication {
   pwd = ./.;
   src = ./.;
   modules = ./gomod2nix.toml;
+
+	env = {
+		GRPC_ADDR = "192.168.0.101:50051";
+		JWT_SECRET = "estradiol-seledka";
+		};
 }

@@ -33,18 +33,30 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Could not read .env: " + err.Error())
+		log.Fatalf("Could not read .env: %v\n", err)
 	}
-	config.Migrate(config.Connect())
+	config.Migrate(config.Connect()) // TODO: replace with sql file and Docker migrate job probably
 
+	// Initiating DB
 	pool, err := service.NewDBPool()
 	if err != nil {
-		log.Fatalf("Could not connect to database:%v\n", err)
-		return
+		log.Fatalf("Could not connect to database: %v\n", err)
 	}
 	ds := service.NewDatastore(pool)
-	hub := ws.Hub{}
-	c := controller.NewController(&ds, &hub)
+	defer pool.Close()
+
+	// Initiating gRPC translation service
+	trans, err := service.NewTranslator()
+	if err != nil {
+		log.Fatalf("Could not connect to translator service: %v\n", err)
+	}
+	defer trans.Conn.Close()
+
+	// Initiating websocket wsHub
+	wsHub := ws.NewHub(trans)
+	c := controller.NewController(&ds, wsHub)
+	go wsHub.Run()
+
 
 	r := gin.Default()
 	r.MaxMultipartMemory = config.MAX_AUDIO_SIZE
@@ -86,7 +98,7 @@ func main() {
 	url := ginSwagger.URL("/docs/swagger.json")
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
 
-	err = r.Run()
+	err = r.Run("0.0.0.0:8080")
 	if err != nil {
 		panic(err)
 	}

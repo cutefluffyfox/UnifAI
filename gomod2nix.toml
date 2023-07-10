@@ -49,6 +49,9 @@ schema = 3
   [mod."github.com/golang-jwt/jwt/v5"]
     version = "v5.0.0"
     hash = "sha256-eJhOeyjkEwQAN9cwwAIU4RqnbzHmbDYW27/EzcKgj9Q="
+  [mod."github.com/golang/protobuf"]
+    version = "v1.5.3"
+    hash = "sha256-svogITcP4orUIsJFjMtp+Uv1+fKJv2Q5Zwf2dMqnpOQ="
   [mod."github.com/gorilla/websocket"]
     version = "v1.5.0"
     hash = "sha256-EYVgkSEMo4HaVrsWKqnsYRp8SSS8gNf7t+Elva02Ofc="
@@ -128,8 +131,8 @@ schema = 3
     version = "v0.11.0"
     hash = "sha256-aFI8cpvSZRiQO2HQm6+a4e9OiSf7GUfj69SSta2iZ44="
   [mod."golang.org/x/net"]
-    version = "v0.11.0"
-    hash = "sha256-9MWuk+lNmiiwRNLswRuIp/hhFRfYXJMrH2/Bs7iRW4M="
+    version = "v0.12.0"
+    hash = "sha256-zQZBj42+wLLxXwS/e+KNbu8+SukMDxxW23WSi5XQXAA="
   [mod."golang.org/x/sync"]
     version = "v0.3.0"
     hash = "sha256-bCJKLvwExhYacH2ZrWlZ38lr1d6oNenNt2m1QqDCs0o="
@@ -142,6 +145,15 @@ schema = 3
   [mod."golang.org/x/tools"]
     version = "v0.10.0"
     hash = "sha256-9ylXC8l7/hgsIW/WMKq/5PtE6fswd2zp783Z4UO5IT4="
+  [mod."google.golang.org/genproto"]
+    version = "v0.0.0-20230629202037-9506855d4529"
+    hash = "sha256-can8woyALD0GqUiYVlhq4rRomOD+pk8LzXLzcHY2s/U="
+  [mod."google.golang.org/genproto/googleapis/rpc"]
+    version = "v0.0.0-20230706204954-ccb25ca9f130"
+    hash = "sha256-xjnUWHd5Hzbv7JBIJaSARxHJJlEMPAL5qDbDDiUzxXo="
+  [mod."google.golang.org/grpc"]
+    version = "v1.56.2"
+    hash = "sha256-zL0LYCT9OaWU+Zisp0yUT+DYZvVPRePL2AE3gNI4h7M="
   [mod."google.golang.org/protobuf"]
     version = "v1.31.0"
     hash = "sha256-UdIk+xRaMfdhVICvKRk1THe3R1VU+lWD8hqoW/y8jT0="
