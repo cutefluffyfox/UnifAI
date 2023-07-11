@@ -24,7 +24,7 @@ services:
 
   trans:
     build:
-      context: https://${GH_TOKEN}:@github.com/cutefluffyfox/UnifAI.git#TTTT
+      context: https://cutefluffyfox:${GH_TOKEN}@github.com/cutefluffyfox/UnifAI.git#TTTT
     expose:
       - 50051
 
