@@ -33,7 +33,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Could not read .env: %v\n", err)
+		log.Printf("Could not read .env: %v\n", err)
 	}
 	config.Migrate(config.Connect()) // TODO: replace with sql file and Docker migrate job probably
 
@@ -88,7 +88,7 @@ func main() {
 			{
 				actions.GET("/join", c.JoinRoom)
 				actions.GET("/leave", c.LeaveRoom)
-				actions.GET("/connect")
+				actions.GET("/connect", c.RoomConnect)
 			}
 			room.POST("/create", c.CreateRoom)
 			room.GET("/list", c.ListRooms)

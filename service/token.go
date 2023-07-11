@@ -1,9 +1,10 @@
 package service
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 	"unifai/httputil"
 
@@ -73,11 +74,13 @@ func ParseToken(tokenStr string) (*jwt.Token, error) {
 
 func ExtractToken(r *http.Request) (string, error) {
 	raw := r.Header.Get("Authorization")
-	str := strings.Split(raw, " ")
-	if len(str) == 2 {
-		return str[1], nil
+	var str string
+	n, err := fmt.Sscanf(raw, "Bearer %s", &str)
+
+	if n == 1 && err == nil {
+		return str, nil
 	}
-	return "", InvalidHeaderError{}
+	return "", errors.New("Incorrect token format: " + err.Error())
 }
 
 // Validates jwt token, compares its type(refresh/access) and sets user_id header to id stored in the token

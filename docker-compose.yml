@@ -1,19 +1,36 @@
 services:
   web:
-    image: "unifai-golang-backend"
+    build: .
+    image: "unifai-backend"
+    depends_on:
+      - db
+      - trans
+
     ports:
       - 8080:8080
     environment:
-      PORT: "8080"
-      DB_URL: "postgres"
+      # PORT: "8080"
+      DB_URL: "postgresql://db:5432/"
+      JWT_SECRET: "estradiol-seledka"
+      GRPC_ADDR: "unifai-translation:50051"
+
   db:
     image: postgres 
     restart: always
     environment:
-      - POSTGRES_PASSWORD: unifaipg
+      POSTGRES_PASSWORD: "unifaipg"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  trans:
+    build:
+      context: https://${GH_TOKEN}:@github.com/cutefluffyfox/UnifAI.git#TTTT
+    expose:
+      - 50051
+
+
 volumes:
   pgdata:
+
+  opusmodels:
 
