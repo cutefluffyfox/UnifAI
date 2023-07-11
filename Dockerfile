@@ -12,6 +12,7 @@ ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 RUN pip3 install poetry 
 # RUN poetry config virtualenvs.create false
 RUN poetry install --only main
+RUN pip3 install transformers[torch]
 
 RUN poetry run preload_models
 

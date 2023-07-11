@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-transformers = "^4.30.2"
+# transformers = "^4.30.2"
 grpcio = "^1.56.0"
 torch = "^2.0.0"
 sentencepiece = "^0.1.99"
