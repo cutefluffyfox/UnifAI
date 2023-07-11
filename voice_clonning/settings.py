@@ -1,2 +1,2 @@
 SPEECH_SPEED = 1.2
-PIPER_MODEL = 'en_US-libritts-high'
+PIPER_MODEL = 'ru_RU-irina-medium'

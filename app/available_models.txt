@@ -1,6 +1,7 @@
 zh_CN-huayan-x_low
 zh_CN-huayan-medium
 ru_RU-irina-medium
+ru_RU-dmitri-medium
 nl_BE-nathalie-x_low
 nl_BE-nathalie-medium
 nl_NL-mls_7432-low

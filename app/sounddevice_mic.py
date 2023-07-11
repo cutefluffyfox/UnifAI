@@ -2,11 +2,44 @@ import numpy as np
 import logging
 import traceback
 import sounddevice as sd
+import soundfile as sf
+import os
+import queue
+import sys
+import keyboard
 
 from faster_whisper.vad import get_speech_timestamps, collect_chunks
 
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
+
+SAMPLE_RATE = 16000
+NUM_CHANNELS = 1
+
+q = queue.Queue()
+
+
+def callback(indata, frames, time, status):
+    if status:
+        print(status, file=sys.stderr)
+    q.put(indata.copy())
+
+
+def record_audio_to_file():
+    if not os.path.exists('../sandbox'):
+        os.makedirs('../sandbox')
+        if not os.path.exists('../sandbox/voice'):
+            os.makedirs('../sandbox/voice')
+
+    file_path = '../sandbox/voice/sample_self.wav'
+    try:
+        with sf.SoundFile(file_path, mode='x',
+                          samplerate=SAMPLE_RATE, channels=NUM_CHANNELS) as file:
+            with sd.InputStream(samplerate=SAMPLE_RATE, channels=NUM_CHANNELS, callback=callback):
+                while True:
+                    file.write(q.get())
+    except KeyboardInterrupt:
+        print('Recording is finished and saved to file', file_path)
 
 
 class Microphone:
@@ -64,8 +97,8 @@ class Microphone:
             self._stream.close()
 
     def _build_mic_info(self):
-        self.sample_rate = 16000
-        self.num_channels = 1
+        self.sample_rate = SAMPLE_RATE
+        self.num_channels = NUM_CHANNELS
         self.is_running = False
         self.chunk_size = 30
         self.frames_per_buffer = self.chunk_size * self.sample_rate

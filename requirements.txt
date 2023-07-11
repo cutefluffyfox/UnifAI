@@ -12,6 +12,8 @@ requests~=2.31.0
 TTS~=0.15.0
 gTTS~=2.3.2
 playsound~=1.3.0
-numpy
-onnxruntime
+numpy~=1.24.3
+onnxruntime~=1.15.1
 python-multipart~=0.0.6
+soundfile~=0.12.1
+keyboard~=0.13.5

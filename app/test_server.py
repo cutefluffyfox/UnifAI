@@ -21,7 +21,7 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
-        result = {'action': 'getUid', 'uid': str(uuid.uuid4())}
+        result = {'type': 'getUid', 'uid': str(uuid.uuid4())}
 
         await websocket.send_text(json.dumps(result))
 
@@ -30,9 +30,8 @@ class ConnectionManager:
 
     @staticmethod
     async def send_translated_message(data, websocket: WebSocket):
-        target_languages = {}
         data = json.loads(data)
-        result = {'action': 'synthesis', 'translation': data['text'], 'sender_uid': data['uid']}
+        result = {'type': 'synthesis', 'text': data['text'], 'sender_id': data['uid']}
         await websocket.send_text(json.dumps(result))
 
 

@@ -95,15 +95,6 @@ class Piper:
         phoneme_ids_lengths = np.array([phoneme_ids_array.shape[1]], dtype=np.int64)
         scales = np.array([noise_scale, length_scale, noise_w], dtype=np.float32)
 
-        if (self.config.num_speakers > 1) and (speaker_id is not None):
-            # Default speaker
-            speaker_id = 0
-
-        sid = None
-
-        if speaker_id is not None:
-            sid = np.array([speaker_id], dtype=np.int64)
-
         # Synthesize through Onnx
         audio = self.model.run(
             None,
@@ -111,7 +102,11 @@ class Piper:
                 "input": phoneme_ids_array,
                 "input_lengths": phoneme_ids_lengths,
                 "scales": scales,
-                "sid": sid,
+                "sid": None
+                if self.config.num_speakers == 1
+                else np.array([0 if speaker_id is None
+                               else speaker_id],
+                              dtype=np.int64),
             },
         )[0].squeeze((0, 1))
         audio = audio_float_to_int16(audio.squeeze())
@@ -158,5 +153,4 @@ def audio_float_to_int16(audio: np.ndarray, max_wav_value: float = 32767.0) -> n
     audio_norm = np.clip(audio_norm, -max_wav_value, max_wav_value)
     audio_norm = audio_norm.astype("int16")
     return audio_norm
-
 
