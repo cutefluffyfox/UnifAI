@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "unifai"
+version = "0.1.0"
+description = ""
+authors = ["Ekaterina Urmanova"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+transformers = "^4.30.2"
+grpcio = "^1.56.0"
+torch = "^2.0.1"
+sentencepiece = "^0.1.99"
+
+[tool.poetry.scripts]
+preload_models = 'unifai.TTTT:preload_models'
+server = 'unifai.server:main'
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

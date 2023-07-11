@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-import torch
-from typing import Dict
-import time
+# import torch
+# from typing import Dict
+# import time
 
 AVAILABLE_LANGUAGES = ['en', 'ru', 'fr', 'es']#[, 'de', 'zh', 'sv', 'pl', 'fi', 'nl', 'ca', 'is', 'el', 'no', 'it', 'uk', 'vi', 'da', 'pt']
 
@@ -17,7 +17,7 @@ class SingleWayTTTT:
 
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(f"Helsinki-NLP/opus-mt-{input_language}-{output_language}")
-            #self.model = AutoModelForSeq2SeqLM.from_pretrained(f"Helsinki-NLP/opus-mt-{input_language}-{output_language}")
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(f"Helsinki-NLP/opus-mt-{input_language}-{output_language}")
             self.translate('')
             self.works = True
             print(f"Model loaded: {input_language} to {output_language}")
@@ -96,4 +96,12 @@ class TTTT:
         print(s)
         return s
 
+
+def preload_models():
+    for from_lang in AVAILABLE_LANGUAGES:
+        for to_lang in AVAILABLE_LANGUAGES:
+            if from_lang != to_lang:
+                a = AutoTokenizer.from_pretrained(f"Helsinki-NLP/opus-mt-{from_lang}-{to_lang}")
+                b = AutoModelForSeq2SeqLM.from_pretrained(f"Helsinki-NLP/opus-mt-{from_lang}-{to_lang}")
+                del a, b
 
