@@ -15,6 +15,8 @@ settings_window_global = -1
 language_settings_window_global = -1
 voice_recording_window_global = -1
 main_app_window_global = -1
+audio_record_window_global = -1
+room_choose_window_global = -1
 
 
 class Settings:
@@ -28,6 +30,7 @@ class Settings:
         # Language settings
         self.language = "english"
         self.language_model = "medium"
+        self.language_settings_initialized = "0"
 
     def read_settings_from_file(self):
         config = ConfigParser()
@@ -42,6 +45,7 @@ class Settings:
                 self.input_device_name = config.get('main', 'input_device_name')
                 self.language = config.get('language', 'language')
                 self.language_model = config.get('language', 'language_model')
+                self.language_settings_initialized = config.get('language', 'language_settings_initialized')
             except:
                 pass
 
@@ -58,6 +62,7 @@ class Settings:
         config.add_section('language')
         config.set('language', 'language', self.language)
         config.set('language', 'language_model', self.language_model)
+        config.set('language', 'language_settings_initialized', self.language_settings_initialized)
         with open(self.settings_file, 'w') as f:
             config.write(f)
 
@@ -107,6 +112,10 @@ def get_eligible_models_for_language(language):
 
 
 def login_callback():
+    print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
+
+
+def register_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
 
 
@@ -168,6 +177,8 @@ def main():
     global language_settings_window_global
     global voice_recording_window_global
     global main_app_window_global
+    global audio_record_window_global
+    global room_choose_window_global
 
     global settings_object_global
     dpg.create_context()
@@ -179,6 +190,9 @@ def main():
 
     settings_object_global.read_settings_from_file()
 
+
+
+    # Main Login Window
     with dpg.window(label="Login", autosize=True, no_title_bar=True, no_move=True) as login_window_global:
         with dpg.table(header_row=False, policy=dpg.mvTable_SizingStretchProp):
             cell_width = logo_dimensions[0] / 3
@@ -199,12 +213,17 @@ def main():
                     dpg.add_input_text(label="Server Address", tag="addressbox")
                     dpg.add_input_text(label="Username", tag="usernamebox")
                     dpg.add_input_text(label="Password", tag="passwordbox", password=True)
-                    dpg.add_button(label="Log In", callback=login_callback, width=cell_width)
+                    with dpg.group(horizontal=True):
+                        dpg.add_button(label="Log In", callback=login_callback, width=cell_width / 2)
+                        dpg.add_button(label="Register", callback=login_callback, width=cell_width / 2)
                 with dpg.table_cell():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
                     pass
         dpg.set_primary_window(login_window_global, True)
 
+
+
+    # Settings Window
     with dpg.window(label="Settings", autosize=True, show=False, on_close=save_settings_callback) as settings_window_global:
         dpg.add_slider_float(label="Volume", clamped=True, tag="settings_volume_slider_box", default_value=settings_object_global.volume, callback=change_volume_callback)
         dpg.add_slider_float(label="Playback Speed", clamped=True, tag="settings_playback_speed_slider_box", min_value=0.3, max_value=5, default_value=settings_object_global.playback_speed, callback=change_playback_speed_callback)
@@ -212,10 +231,15 @@ def main():
         dpg.add_combo(get_input_device_names(), label="Input Device", tag="settings_input_device_combo_box", default_value=settings_object_global.input_device_name, callback=change_input_device_callback)
         dpg.add_button(label="Save Settings", callback=save_settings_callback)
 
+
+
+    # Language Settings Window
     with dpg.window(label="Language Settings", autosize=True, show=False, on_close=save_settings_callback) as language_settings_window_global:
         dpg.add_combo(list(map(lambda x: str.capitalize(x), get_eligible_languages())), label="Language", tag="settings_language_combo_box", default_value=str.capitalize(settings_object_global.language), callback=change_language_callback)
         dpg.add_combo(get_eligible_models_for_language(settings_object_global.language), label="Language Model", tag="settings_language_model_combo_box", default_value=settings_object_global.language_model, callback=change_language_model_callback)
         dpg.add_button(label="Save Settings", callback=save_settings_callback)
+
+
 
 
     with dpg.viewport_menu_bar():
