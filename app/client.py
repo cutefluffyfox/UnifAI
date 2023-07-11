@@ -6,7 +6,7 @@ from model import FasterWhisper
 from datetime import datetime
 from playsound import playsound
 
-import tempfile
+import uuid
 import logging
 import json
 import rel
@@ -24,6 +24,7 @@ from voice_clonning.vc import VoiceCloningModel
 from voice_clonning.piper import Piper
 
 SERVER_URL = "127.0.0.1:5000"
+voice_sample = '../sandbox/voice/test.ogg'
 SELF_UID = None
 
 FORMAT = '%(asctime)s : %(message)s'
@@ -39,19 +40,22 @@ vc = VoiceCloningModel()
 current_room = {}
 
 
+def play_sound(file_name: str):
+    playsound(file_name)
+    os.remove(file_name)
+
+
 def synthesize_text(text: str, uid: int):
-    # file_name = f'{str(uuid.uuid4())}.wav'
-    with tempfile.NamedTemporaryFile(suffix='wav') as tmp:
-        file_name = tmp.name
+    file_name = f'../tmp/{str(uuid.uuid4())}.wav'
 
-        piper.synthesize_and_save(text, output_file=file_name, length_scale=SPEECH_SPEED)
-        if uid in current_room:
-            print('Cloning voice...')
-            vc.synthesise_and_save(speech_path=file_name, voice_path=current_room[uid], output_file=file_name)
-        else:
-            print(f'No sample audio for {uid} found, proceeding without voice cloning')
+    piper.synthesize_and_save(text, output_file=file_name, length_scale=SPEECH_SPEED)
+    if uid in current_room:
+        logging.info('Cloning voice...')
+        vc.synthesise_and_save(speech_path=file_name, voice_path=current_room[uid], output_file=file_name)
+    else:
+        logging.info('No sample audio for {uid} found, proceeding without voice cloning')
 
-        playsound(file_name)
+    threading.Thread(target=play_sound, args=(os.path.abspath(file_name),)).start()
 
     return
 
@@ -59,16 +63,18 @@ def synthesize_text(text: str, uid: int):
 class WebsocketClient:
     def __init__(self, url):
         # websocket.enableTrace(True)
+        print("initing")
         self.ws = websocket.WebSocketApp(url,
                                          on_message=lambda ws, msg: self.on_message(ws, msg),
                                          on_error=lambda ws, msg: self.on_error(ws, msg),
                                          on_close=lambda ws, css, cs: self.on_close(ws, css, cs),
-                                         on_open=lambda ws: self.on_open(ws))
+                                         on_open=self.on_open)
         self.url = url
         self.ws.run_forever(dispatcher=rel, reconnect=5)
         rel.dispatch()
 
     def run(self):
+        # print('Started ')
         with Microphone() as mic:
             for audio_segment in mic.stream():
                 duration = audio_segment.shape[0] / mic.sample_rate
@@ -88,14 +94,14 @@ class WebsocketClient:
     def on_message(ws, message):
         global SELF_UID
         message = json.loads(message)
-        print("Received back from server:", message['translation'])
+        print("Received back from server:", message)
 
         if message['action'] == 'synthesis':
             threading.Thread(target=synthesize_text, args=(message['translation'], message['sender_uid'],)).start()
         elif message['action'] == 'getUid':
             SELF_UID = message["uid"]
             print(f'Server assigned uid: {SELF_UID}')
-            current_room[SELF_UID] = '../sandbox/voice/test.ogg'
+            current_room[SELF_UID] = voice_sample
         else:
             print('Unknown message:', message)
 
@@ -110,7 +116,8 @@ class WebsocketClient:
             print("Close message: " + str(close_msg))
 
     def on_open(self, ws):
-        threading.Thread(target=self.run).start()
+        print('Opened websocket connection with server')
+        threading.Thread(target=self.run, daemon=True).start()
 
     def send_message(self, message):
         if self.ws:
@@ -118,6 +125,9 @@ class WebsocketClient:
 
 
 def main():
+    if not os.path.exists('../tmp'):
+        os.mkdir('../tmp')
+
     ws = WebsocketClient(f"ws://{SERVER_URL}/ws")
 
 
