@@ -1,4 +1,6 @@
 from faster_whisper import WhisperModel
+from faster_whisper.transcribe import Segment
+import logging
 import numpy as np
 
 import torch
@@ -6,6 +8,9 @@ import torch
 MODELS = ['tiny', 'tiny.en', 'base', 'base.en',
           'small', 'small.en', 'medium', 'medium.en',
           'large-v1', 'large-v2']
+
+logger = logging.getLogger('whisper')
+logger.setLevel(level=logging.INFO)
 
 
 class FasterWhisper:
@@ -58,7 +63,7 @@ class FasterWhisper:
             ],
             'compression_ratio_threshold': 2.4,
             'log_prob_threshold': -1.0,
-            'no_speech_threshold': 0.6,
+            'no_speech_threshold': 0.65,
             'condition_on_previous_text': True,
             'initial_prompt': self._buffer or None,
             'prefix': None,
@@ -79,13 +84,12 @@ class FasterWhisper:
         text = ''
         segments, info = self.model.transcribe(audio, **self.transcription_parameters)
         language = info.language
-        lang_prob = info.language_probability
+        # lang_prob = info.language_probability
 
         for segment in segments:
             # self._buffer += segment.text
             text += segment.text
 
-        return {'text': text.strip(),
-                'delay': 0.,
-                'language': language,
-                'language_probability': lang_prob}
+        return {'action': 'transcribe',
+                'text': text.strip(),
+                'lang': language}
