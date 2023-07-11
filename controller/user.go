@@ -2,6 +2,8 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 	"unifai/config"
 	"unifai/httputil"
 
@@ -29,20 +31,22 @@ func (c *Controller) UploadAudio(ctx *gin.Context) {
 	}
 
 	file, err := formFile.Open()
+	defer file.Close()
+
 	if err != nil {
 		httputil.NewError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
 	content := make([]byte, config.MAX_AUDIO_SIZE)
-	_, err = file.Read(content)
+	n, err := file.Read(content)
 	if err != nil {
 		httputil.NewError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
 	uid := ctx.GetInt("user_id")
-	_, err = c.Store.SetUserAudio(uid, content)
+	_, err = c.Store.SetUserAudio(uid, content[:n])
 	if err != nil {
 		httputil.NewError(ctx, http.StatusInternalServerError, err)
 		return
@@ -66,7 +70,18 @@ func (c *Controller) UploadAudio(ctx *gin.Context) {
 //	@Security		BearerAccess
 //	@Router			/user/audio/{id} [get]
 func (c *Controller) GetAudio(ctx *gin.Context) {
-	_ = ctx.Param("id")
+	par := ctx.Param("id") // has slashes on beginning and end
+	userId, err := strconv.Atoi(strings.ReplaceAll(par, "//", ""))
+	if err != nil {
+		httputil.NewError(ctx, http.StatusBadRequest, err)
+		return
+	}
+	content, err := c.Store.GetUserAudio(userId)
+	if err != nil {
+		httputil.NewError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+	ctx.Data(http.StatusOK, "audio/ogg", content)
 }
 
 // Whoami godoc

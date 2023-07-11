@@ -136,7 +136,7 @@ func (c *Controller) LeaveRoom(ctx *gin.Context) {
 //	@Security		BearerAccess
 //	@Router			/room/{id}/connect [get]
 func (c *Controller) RoomConnect(ctx *gin.Context) {
-	par := ctx.Param("roomId") // has slashes on beginning and end
+	par := ctx.Param("id") // has slashes on beginning and end
 	roomId, err := strconv.Atoi(strings.ReplaceAll(par, "//", ""))
 
 	if err != nil {
@@ -177,7 +177,7 @@ func (c *Controller) RoomConnect(ctx *gin.Context) {
 		PreferredLang: lang,
 	}
 
-	ws.ServeWs(c.Hub, clientInfo, ctx.Writer, ctx.Request, userData...)
+	ws.ServeWs(c.Hub, &clientInfo, ctx.Writer, ctx.Request, userData...)
 }
 
 // ListRooms godoc

@@ -7,14 +7,14 @@ import (
 )
 
 type ChatMessage struct {
-	UserId int 
-	RoomId int
-	Lang language.Tag 
-	Body string
+	UserId int `json:"user_id"`
+	RoomId int `json:"room_id"`
+	Lang language.Tag `json:"lang"`
+	Body string `json:"text"`
 }
 
 type MessageIn struct {
-	MessageType string `json:"action"`
+	MessageType string `json:"type"`
 	Body string `json:"text"` 
 	Language string `json:"lang"` // ISO 639-1
 }
@@ -37,7 +37,7 @@ type WsClientDigest struct {
 }
 
 type MessageWelcome struct {
-	MessageType string `json:"action"`
+	MessageType string `json:"type"`
 	Users []WsClientDigest `json:"users"`
 }
 

@@ -10,7 +10,7 @@ import (
 type Hub struct {
 	unregister chan *Client
 	register   chan *Client
-	send       chan ChatMessage
+	send       chan *ChatMessage
 
 	clients map[*Client]bool
 	rooms   map[int][]*Client
@@ -22,7 +22,7 @@ func NewHub(t *service.Translator) *Hub {
 	return &Hub{
 		unregister: make(chan *Client),
 		register:   make(chan *Client),
-		send:       make(chan ChatMessage),
+		send:       make(chan *ChatMessage),
 
 		clients: make(map[*Client]bool),
 		rooms:   make(map[int][]*Client),
@@ -55,14 +55,19 @@ func (h *Hub) Run() {
 			log.Printf("User %d left room %d", cl.UserId, cl.RoomId)
 			msg := MessageRoomUpdate{MessageType: "user_left", UserId: cl.UserId}
 			for _, c := range h.rooms[rid] {
-				c.Out <- msg
+				if _, ok := h.clients[cl]; c.UserId != cl.UserId && ok {
+					c.Out <- msg
+				}
 			}
 
 		case msg := <- h.send:
 			rid := msg.RoomId
 			for _, cl := range h.rooms[rid] {
 				if _, ok := h.clients[cl]; cl.UserId != msg.UserId && ok {
-					msgOut := &msg
+					var msgOut MessageOut
+					msgOut.SenderId = msg.UserId
+					msgOut.MessageType = "synthesis"
+
 					if msg.Lang != cl.PreferredLang { // need to translate stuff
 						body, err := h.translator.Translate(msg.Body, msg.Lang, cl.PreferredLang)
 						if err != nil {
@@ -70,8 +75,9 @@ func (h *Hub) Run() {
 							continue
 						} else {
 							msgOut.Body = body
-							msgOut.Lang = cl.PreferredLang
 						}
+					} else {
+						msgOut.Body = msg.Body
 					}
 
 					select {
