@@ -3,6 +3,7 @@ FROM python:3.10
 RUN mkdir /app 
 
 COPY /unifai /app/unifai
+COPY requirements.txt /app
 # COPY pyproject.toml /app 
 # COPY README.md /app
 
