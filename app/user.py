@@ -155,6 +155,7 @@ class User(AbstractUser):
             print(f'Error while creating room: {r.text}')
 
         self.current_room_id = int(r.json()['message'].split(': ')[1])
+        print('Created room with id:', self.current_room_id)
 
         return self.current_room_id
 

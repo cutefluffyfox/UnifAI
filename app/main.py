@@ -336,8 +336,8 @@ def change_language_model_callback(sender):
     language_model_value = dpg.get_value(sender)
     settings_object_global.language_model = language_model_value
     model = settings_object_global.language + '-' + language_model_value
-    piper = Piper(model, use_cuda='auto')
     PiperDownloader(model).download()
+    piper = Piper(model, use_cuda='auto')
 
 
 def change_server_url_callback(sender):
@@ -465,9 +465,6 @@ def main():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
                     pass
 
-
-
-
     # Room Picking
     with dpg.window(label="Room Choosing", autosize=True, no_title_bar=True, no_move=True,
                     show=False) as room_choose_window_global:
@@ -504,13 +501,14 @@ def main():
         dpg.add_spacer(height=25)
 
         dpg.add_button(label="Leave Room", callback=leave_room_callback, width=cell_width)
+        dpg.add_text(label='Current room id:' + str(user.get_current_room_id()))
         with dpg.table(header_row=False, policy=dpg.mvTable_SizingStretchProp):
             dpg.add_table_column(width=cell_width, width_stretch=True)
             with dpg.table_row():
                 with dpg.table_cell() as ccell2:
                     dpg.add_spacer(height=25)
-                    for i in range(1000):
-                        dpg.add_text("Hello!")
+                    # dpg.add_text('')
+                    #    dpg.add_text("Hello!")
                     #dpg.add_image("unifai-logo", width=logo_dimensions[0] / 3,
                     #              height=logo_dimensions[1] / 3)
                     #dpg.add_spacer(height=20)
