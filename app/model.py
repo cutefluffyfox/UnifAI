@@ -38,7 +38,6 @@ class FasterWhisper:
             device = 'cuda'
             torch.device('cuda')
         else:
-            # compute_type = 'int8'
             compute_type = 'float32'
             device = 'cpu'
             torch.device('cpu')
@@ -63,7 +62,7 @@ class FasterWhisper:
             ],
             'compression_ratio_threshold': 2.4,
             'log_prob_threshold': -1.0,
-            'no_speech_threshold': 0.65,
+            'no_speech_threshold': 0.6,
             'condition_on_previous_text': True,
             'initial_prompt': self._buffer or None,
             'prefix': None,
@@ -87,7 +86,6 @@ class FasterWhisper:
         # lang_prob = info.language_probability
 
         for segment in segments:
-            # self._buffer += segment.text
             text += segment.text
 
         return {'action': 'transcribe',
