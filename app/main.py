@@ -180,6 +180,7 @@ def login_callback():
                 voice_sample_path=voice_sample,
                 db_connection=conn)
     user.login()
+    user.send_sample_data()
 
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
@@ -199,6 +200,7 @@ def register_callback():
                 voice_sample_path=voice_sample,
                 db_connection=conn)
     user.register()
+    user.send_sample_data()
 
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()

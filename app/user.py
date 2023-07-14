@@ -105,9 +105,6 @@ class User(AbstractUser):
     def login(self):
         cur = self.conn.cursor()
         cur.execute('SELECT user_id FROM user WHERE username = ?', (self.username,))
-        if cur.fetchone() is None:
-            print('Attempt to log in without registering')
-            return
 
         r = requests.post(f'http://{SERVER_URL}/auth/login', json={
             'username': self.username,
@@ -122,8 +119,14 @@ class User(AbstractUser):
         self.access_token = tokens['access_token']
         self.refresh_token = tokens['refresh_token']
 
-        cur.execute(f"UPDATE user SET access_token='{self.access_token}', "
-                    f"refresh_token='{self.refresh_token}' WHERE username='{self.username}'")
+        if cur.fetchone() is None:
+            print('Attempt to log in without registering')
+            cur.execute(f"INSERT INTO user(username, password, access_token, refresh_token) "
+                        f"VALUES('{self.username}', '{self.password}', '{self.access_token}', '{self.refresh_token}');")
+        else:
+            cur.execute(f"UPDATE user SET access_token='{self.access_token}', "
+                        f"refresh_token='{self.refresh_token}' WHERE username='{self.username}'")
+
         self.conn.commit()
         cur.close()
         print(f'Logged in, got access_token: {self.access_token}, refresh_token: {self.refresh_token}')
