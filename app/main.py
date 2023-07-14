@@ -246,6 +246,23 @@ def join_room_callback():
 
     user.join_room(int(roomName))
 
+
+def create_room_callback():
+    global user
+    global ws
+    print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
+    roomName = dpg.get_value('roomnamebox')
+
+    room_id = user.create_room(admin_id=0, description='test', name=roomName)
+
+
+def connect_room_callback():
+    global user
+    global settings_object_global
+    global ws
+    print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
+    roomName = dpg.get_value('roomnamebox')
+
     dpg.show_item(main_app_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(main_app_window_global, True)
@@ -257,23 +274,6 @@ def join_room_callback():
     dpg.set_value("roomidtext", 'Current room id: ' + str(user.get_current_room_id()))
 
 
-def create_room_callback():
-    global user
-    global ws
-    print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    roomName = dpg.get_value('roomnamebox')
-
-    room_id = user.create_room(admin_id=0, description='test', name=roomName)
-
-    dpg.show_item(main_app_window_global)
-    dpg.hide_item(dpg.get_active_window())
-    dpg.set_primary_window(main_app_window_global, True)
-    ws = WebsocketClient(f"ws://{SERVER_URL}/room/{room_id}/connect"
-                         f"?lang={settings_object_global.language.split('_')[0]}",
-                         bearer_token=user.access_token,
-                         db_connection=conn,
-                         speech_speed=settings_object_global.playback_speed)
-    dpg.set_value("roomidtext", 'Current room id: ' + str(user.get_current_room_id()))
 
 
 def leave_room_callback():
@@ -489,8 +489,9 @@ def main():
                     dpg.add_text("Room Choosing")
                     dpg.add_input_text(label="Room Name", tag="roomnamebox")
                     with dpg.group(horizontal=True):
-                        dpg.add_button(label="Join", callback=join_room_callback, width=cell_width / 2)
-                        dpg.add_button(label="Register", callback=create_room_callback, width=cell_width / 2)
+                        dpg.add_button(label="Join", callback=join_room_callback, width=cell_width / 3)
+                        dpg.add_button(label="Register", callback=create_room_callback, width=cell_width / 3)
+                        dpg.add_button(label="Connect", callback=connect_room_callback, width=cell_width / 3)
                     dpg.add_button(label="Log Out", callback=logout_callback, width=cell_width + 8)
                 with dpg.table_cell():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
