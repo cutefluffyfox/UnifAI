@@ -75,7 +75,7 @@ class Settings:
             config.write(f)
 
 
-settings_object_global = Settings('config.ini')
+settings_object_global = Settings('../config.ini')
 
 
 def fix_icon_for_taskbar():
@@ -121,7 +121,7 @@ def get_eligible_models_for_language(language):
 
 def login_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    if not os.path.exists('samples/sample_self.wav'):
+    if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
     else:
         go_to_room_choose_screen()
@@ -133,7 +133,7 @@ def login_callback():
 
 def register_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    if not os.path.exists('samples/sample_self.wav'):
+    if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
     else:
         go_to_room_choose_screen()
@@ -299,7 +299,7 @@ def main():
     fix_icon_for_taskbar()
     dpg.setup_dearpygui()
 
-    logo_dimensions = load_image_from_file("unifai-logo.png", "unifai-logo")
+    logo_dimensions = load_image_from_file("../unifai-logo.png", "unifai-logo")
 
     settings_object_global.read_settings_from_file()
 
@@ -432,15 +432,11 @@ def main():
         dpg.add_combo(get_input_device_names(), label="Input Device", tag="settings_input_device_combo_box", default_value=settings_object_global.input_device_name, callback=change_input_device_callback)
         dpg.add_button(label="Save Settings", callback=save_settings_callback)
 
-
-
     # Language Settings Window
     with dpg.window(label="Language Settings", autosize=True, show=False, on_close=language_save_settings_callback) as language_settings_window_global:
         dpg.add_combo(list(map(lambda x: str.capitalize(x), get_eligible_languages())), label="Language", tag="settings_language_combo_box", default_value=str.capitalize(settings_object_global.language), callback=change_language_callback)
         dpg.add_combo(get_eligible_models_for_language(settings_object_global.language), label="Language Model", tag="settings_language_model_combo_box", default_value=settings_object_global.language_model, callback=change_language_model_callback)
         dpg.add_button(label="Save Settings", callback=language_save_settings_callback)
-
-
 
     global viewport_menu_bar_global
     global menu_buttons

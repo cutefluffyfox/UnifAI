@@ -30,10 +30,10 @@ class Recorder:
         self.is_recording = False
 
     def record_audio_to_file(self):
-        if not os.path.exists('samples'):
-            os.makedirs('samples')
+        if not os.path.exists('../samples'):
+            os.makedirs('../samples')
 
-        file_path = 'samples/sample_self.wav'
+        file_path = '../samples/sample_self.wav'
         try:
             with sf.SoundFile(file_path, mode='w',
                               samplerate=SAMPLE_RATE,
