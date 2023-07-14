@@ -18,3 +18,4 @@ python-multipart~=0.0.6
 soundfile~=0.12.1
 keyboard~=0.13.5
 PyJWT~=2.7.0
+dearpygui~=1.9.1
