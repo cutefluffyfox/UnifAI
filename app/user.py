@@ -50,6 +50,7 @@ class User:
 
         cur.execute(f"INSERT INTO user(username, password, access_token, refresh_token) "
                     f"VALUES('{self.username}', '{self.password}', '{self.access_token}', '{self.refresh_token}');")
+        self.conn.commit()
         cur.close()
 
     def login(self):
@@ -74,6 +75,7 @@ class User:
 
         cur.execute(f"UPDATE user SET access_token='{self.access_token}', "
                     f"refresh_token='{self.refresh_token}' WHERE username='{self.username}'")
+        self.conn.commit()
         cur.close()
         print(f'Logged in, got access_token: {self.access_token}, refresh_token: {self.refresh_token}')
 
@@ -132,5 +134,6 @@ class User:
         cur = self.conn.cursor()
         cur.execute(f"UPDATE user SET access_token='{self.access_token}', "
                     f"refresh_token='{self.refresh_token}' WHERE username='{self.username}'")
+        self.conn.commit()
         cur.close()
         print('Successfully refreshed token pair')

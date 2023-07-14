@@ -79,6 +79,7 @@ def create_tables(connection: sqlite3.Connection):
     cur = connection.cursor()
     cur.execute(create_samples)
     cur.execute(create_info)
+    connection.commit()
     cur.close()
 
 
@@ -178,6 +179,7 @@ class WebsocketClient:
                                 f"sample_path='{voice_sample_path}' WHERE user_id={user_id}")
 
                     # current_room[user_id] = {'voice_sample_path': voice_sample_path, 'last_update': last_update}
+                self.conn.commit()
                 cur.close()
         else:
             print('Unrecognised message:', message)
@@ -210,7 +212,7 @@ def main():
 
     create_tables(conn)
 
-    oleg = User(username='KpyTou_4yBaK_12',
+    oleg = User(username='KpyTou_4yBaK_13',
                 password='olegtachki2012',
                 voice_sample_path=voice_sample,
                 db_connection=conn)
@@ -218,6 +220,7 @@ def main():
     oleg.send_sample_data()
     room_id = oleg.create_room()
     print('Created room with id', room_id)
+    input()
 
     ws = WebsocketClient(f"ws://{SERVER_URL}/room/{room_id}/connect?lang=ru",
                          bearer_token=oleg.access_token,
