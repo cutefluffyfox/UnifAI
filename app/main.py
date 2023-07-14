@@ -8,6 +8,7 @@ import ctypes
 from configparser import ConfigParser
 import sounddevice
 from app.sounddevice_mic import Recorder
+from client import *
 
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 700
@@ -25,6 +26,7 @@ logged_in = False
 
 viewport_menu_bar_global = -1
 recorder = Recorder()
+user = None
 
 
 class Settings:
@@ -133,6 +135,12 @@ def login_callback():
 
 def register_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
+    global user
+    user = User(username=dpg.get_value('usernamebox'),
+                password=dpg.get_value('passwordbox'),
+                voice_sample_path=voice_sample,
+                db_connection=conn)
+
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
     else:
@@ -421,8 +429,6 @@ def main():
                     #with dpg.group(horizontal=True):
                     #    dpg.add_button(label="Join", callback=join_room_callback, width=cell_width / 2)
                     #    dpg.add_button(label="Register", callback=register_room_callback, width=cell_width / 2)
-
-
 
     # Settings Window
     with dpg.window(label="Settings", autosize=True, show=False, on_close=save_settings_callback) as settings_window_global:

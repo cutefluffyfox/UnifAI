@@ -47,18 +47,15 @@ conn = sqlite3.connect(db_name, check_same_thread=False)
 
 
 def play_sound(file_name: str):
-    with soundfile.SoundFile(file_name, 'r', channels=1, format='int16', subtype='PCM_16') as file:
-        data, sample_rate = soundfile.read(file, dtype='int16')
+    data, sample_rate = soundfile.read(file_name, dtype='float32')
 
-        data = np.concatenate((data, np.zeros(sample_rate // 2)))
-        sounddevice.play(data, sample_rate, blocking=True)
+    data = np.concatenate((data, np.zeros(sample_rate // 2)))
+    sounddevice.play(data, sample_rate, blocking=True)
 
     try:
-        assert file.closed
         os.remove(file_name)
     except Exception as E:
-        logger.info('Error while deleting temporary audio:', E)
-        pass
+        print(f'Cannot remove file {file_name}: {E}')
 
 
 def create_tables(connection: sqlite3.Connection):
@@ -212,7 +209,7 @@ def main():
 
     create_tables(conn)
 
-    oleg = User(username='KpyTou_4yBaK_14',
+    oleg = User(username='KpyTou_4yBaK_15',
                 password='olegtachki2012',
                 voice_sample_path=voice_sample,
                 db_connection=conn)
