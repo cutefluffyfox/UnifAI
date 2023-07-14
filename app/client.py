@@ -25,7 +25,7 @@ from voice_cloning.vc import VoiceCloningModel
 from voice_cloning.piper import Piper
 
 
-SERVER_URL = "10.91.7.180:8080/api/v1"
+SERVER_URL = "10.91.8.138:8080/api/v1"
 # SERVER_URL = "127.0.0.1:5000"
 voice_sample = '../samples/test.ogg'
 
@@ -73,9 +73,7 @@ def create_tables(connection: sqlite3.Connection):
                     username text NOT NULL,
                     password text NOT NULL,
                     access_token text NOT NULL,
-                    refresh_token text NOT NULL,
-                    transcription_model text,
-                    synthesis_language text
+                    refresh_token text NOT NULL
                 );"""
 
     cur = connection.cursor()
@@ -119,9 +117,9 @@ class WebsocketClient:
         # websocket.enableTrace(True)
         self.bearer_token = bearer_token
         self.ws = websocket.WebSocketApp(url,
-                                         on_message=self.on_message,
-                                         on_error=self.on_error,
-                                         on_close=self.on_close,
+                                         on_message=lambda ws, msg: self.on_message(ws, msg),
+                                         on_error=lambda ws, msg: self.on_error(ws, msg),
+                                         on_close=lambda ws, css, cs: self.on_close(ws, css, cs),
                                          on_open=self.on_open,
                                          header={'Authorization': f'Bearer {self.bearer_token}'})
         self.url = url
@@ -184,10 +182,12 @@ class WebsocketClient:
         else:
             print('Unrecognised message:', message)
 
-    def on_error(self, ws, error):
+    @staticmethod
+    def on_error(ws, error):
         print(error)
 
-    def on_close(self, ws, close_status_code, close_msg):
+    @staticmethod
+    def on_close(ws, close_status_code, close_msg):
         if close_status_code or close_msg:
             print("Close status code: " + str(close_status_code))
             print("Close message: " + str(close_msg))
@@ -210,7 +210,7 @@ def main():
 
     create_tables(conn)
 
-    oleg = User(username='KpyTou_4yBaK',
+    oleg = User(username='KpyTou_4yBaK_12',
                 password='olegtachki2012',
                 voice_sample_path=voice_sample,
                 db_connection=conn)
@@ -218,7 +218,6 @@ def main():
     oleg.send_sample_data()
     room_id = oleg.create_room()
     print('Created room with id', room_id)
-    input()
 
     ws = WebsocketClient(f"ws://{SERVER_URL}/room/{room_id}/connect?lang=ru",
                          bearer_token=oleg.access_token,

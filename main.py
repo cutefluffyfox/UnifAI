@@ -1,10 +1,13 @@
 import configparser
+import threading
 
 import dearpygui.dearpygui as dpg
 import sys
+import os
 import ctypes
 from configparser import ConfigParser
 import sounddevice
+from app.sounddevice_mic import Recorder
 
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 700
@@ -21,6 +24,8 @@ pending_switch_global = None
 logged_in = False
 
 viewport_menu_bar_global = -1
+recorder = Recorder()
+
 
 class Settings:
     def __init__(self, settings_file):
@@ -116,9 +121,11 @@ def get_eligible_models_for_language(language):
 
 def login_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    dpg.show_item(voice_recording_window_global)
-    dpg.hide_item(dpg.get_active_window())
-    dpg.set_primary_window(voice_recording_window_global, True)
+    if not os.path.exists('samples/sample_self.wav'):
+        go_to_recording_screen()
+    else:
+        go_to_room_choose_screen()
+
     global logged_in
     logged_in = True
     show_menu_buttons()
@@ -126,9 +133,11 @@ def login_callback():
 
 def register_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    dpg.show_item(voice_recording_window_global)
-    dpg.hide_item(dpg.get_active_window())
-    dpg.set_primary_window(voice_recording_window_global, True)
+    if not os.path.exists('samples/sample_self.wav'):
+        go_to_recording_screen()
+    else:
+        go_to_room_choose_screen()
+
     global settings_object_global
     if settings_object_global.language_settings_initialized == "0":
         dpg.show_item(language_settings_window_global)
@@ -137,15 +146,28 @@ def register_callback():
     show_menu_buttons()
 
 
+def go_to_recording_screen():
+    dpg.show_item(voice_recording_window_global)
+    dpg.hide_item(dpg.get_active_window())
+    dpg.set_primary_window(voice_recording_window_global, True)
+
+
 def start_recording_callback():
-    pass
+    print('started recording')
+    recorder.is_recording = True
+    threading.Thread(target=recorder.record_audio_to_file).start()
+
 
 def stop_recording_callback():
-    pass
+    recorder.is_recording = False
+    print('stopped callback')
+    go_to_room_choose_screen()
+
+
+def go_to_room_choose_screen():
     dpg.show_item(room_choose_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(room_choose_window_global, True)
-
 
 
 def join_room_callback():
@@ -433,6 +455,7 @@ def main():
     dpg.start_dearpygui()
     dpg.destroy_context()
     dpg.hide_item(viewport_menu_bar_global)
+
 
 if __name__ == "__main__":
     main()

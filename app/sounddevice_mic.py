@@ -25,21 +25,26 @@ def callback(indata, frames, time, status):
     q.put(indata.copy())
 
 
-def record_audio_to_file():
-    if not os.path.exists('../sandbox'):
-        os.makedirs('../sandbox')
-        if not os.path.exists('../sandbox/voice'):
-            os.makedirs('../sandbox/voice')
+class Recorder:
+    def __init__(self):
+        self.is_recording = False
 
-    file_path = '../sandbox/voice/sample_self.wav'
-    try:
-        with sf.SoundFile(file_path, mode='x',
-                          samplerate=SAMPLE_RATE, channels=NUM_CHANNELS) as file:
-            with sd.InputStream(samplerate=SAMPLE_RATE, channels=NUM_CHANNELS, callback=callback):
-                while True:
-                    file.write(q.get())
-    except KeyboardInterrupt:
-        print('Recording is finished and saved to file', file_path)
+    def record_audio_to_file(self):
+        if not os.path.exists('samples'):
+            os.makedirs('samples')
+
+        file_path = 'samples/sample_self.wav'
+        try:
+            with sf.SoundFile(file_path, mode='w',
+                              samplerate=SAMPLE_RATE,
+                              channels=NUM_CHANNELS) as file:
+                with sd.InputStream(samplerate=SAMPLE_RATE,
+                                    channels=NUM_CHANNELS,
+                                    callback=callback):
+                    while self.is_recording:
+                        file.write(q.get())
+        except KeyboardInterrupt:
+            print('Recording is finished and saved to file', file_path)
 
 
 class Microphone:
