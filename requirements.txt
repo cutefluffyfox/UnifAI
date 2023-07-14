@@ -3,4 +3,5 @@ torch == 2.0.0+cpu
 
 transformers == 4.28.0
 grpcio == 1.56.0
+grpcio-tools == 1.56.0
 sentencepiece == 0.1.99
