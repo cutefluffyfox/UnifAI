@@ -4,6 +4,9 @@ version = "0.1.0"
 description = ""
 authors = ["Ekaterina Urmanova"]
 readme = "README.md"
+packages = [
+  {include = "unifai"}
+]
 
 [tool.poetry.dependencies]
 torch = ">=2.0.0, !=2.0.1"
