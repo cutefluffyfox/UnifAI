@@ -58,6 +58,7 @@ class User(AbstractUser):
         return self._current_room_id
 
     def __init__(self, username: str, password: str, voice_sample_path: str, db_connection: sqlite3.Connection):
+        super().__init__()
         self.access_token = None
         self.refresh_token = None
         self.username = username
@@ -67,8 +68,6 @@ class User(AbstractUser):
 
         self.conn = db_connection
         self.conn.row_factory = sqlite3.Row
-
-        self.register()
 
     def get_headers(self):
         print('Headers:', self.access_token)

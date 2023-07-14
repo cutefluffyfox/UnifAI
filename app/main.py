@@ -179,6 +179,7 @@ def login_callback():
                 password=dpg.get_value('passwordbox'),
                 voice_sample_path=voice_sample,
                 db_connection=conn)
+    user.login()
 
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
@@ -197,6 +198,7 @@ def register_callback():
                 password=dpg.get_value('passwordbox'),
                 voice_sample_path=voice_sample,
                 db_connection=conn)
+    user.register()
 
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
@@ -272,8 +274,6 @@ def connect_room_callback():
                          db_connection=conn,
                          speech_speed=settings_object_global.playback_speed)
     dpg.set_value("roomidtext", 'Current room id: ' + str(user.get_current_room_id()))
-
-
 
 
 def leave_room_callback():
