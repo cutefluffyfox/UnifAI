@@ -105,3 +105,6 @@ def preload_models():
                 b = AutoModelForSeq2SeqLM.from_pretrained(f"Helsinki-NLP/opus-mt-{from_lang}-{to_lang}")
                 del a, b
 
+
+if __name__ == "__main__":
+    preload_models()
