@@ -27,7 +27,7 @@ from voice_cloning.piper import Piper
 
 SERVER_URL = "10.91.8.138:8080/api/v1"
 # SERVER_URL = "127.0.0.1:5000"
-voice_sample = '../samples/test.ogg'
+voice_sample = '../samples/sample_self.wav'
 
 SELF_UID = None
 
