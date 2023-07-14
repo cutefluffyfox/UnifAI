@@ -23,8 +23,6 @@ from voice_cloning.settings import SPEECH_SPEED, PIPER_MODEL
 from voice_cloning.downloader import PiperDownloader, FreeVC24Downloader
 from voice_cloning.vc import VoiceCloningModel
 from voice_cloning.piper import Piper
-
-
 SERVER_URL = "10.91.8.138:8080/api/v1"
 # SERVER_URL = "127.0.0.1:5000"
 voice_sample = '../samples/sample_self.wav'
@@ -80,12 +78,12 @@ def create_tables(connection: sqlite3.Connection):
     cur.close()
 
 
-def synthesize_text(text: str, sender_id: int, db_connection: sqlite3.Connection):
+def synthesize_text(text: str, sender_id: int, db_connection: sqlite3.Connection, speech_speed: float):
     file_name = f'../tmp/{str(uuid.uuid4())}.wav'
 
     piper.synthesize_and_save(text,
                               output_file=file_name,
-                              length_scale=SPEECH_SPEED)
+                              length_scale=speech_speed)
     cur = db_connection.cursor()
     cur.execute('SELECT sample_path FROM user_samples WHERE user_id = ?', (sender_id,))
 
@@ -111,7 +109,7 @@ def check_if_outdated(last_update: str, latest_update: str):
 
 
 class WebsocketClient:
-    def __init__(self, url, bearer_token: str, db_connection: sqlite3.Connection):
+    def __init__(self, url, bearer_token: str, db_connection: sqlite3.Connection, speech_speed: float):
         # websocket.enableTrace(True)
         self.bearer_token = bearer_token
         self.ws = websocket.WebSocketApp(url,
@@ -120,12 +118,18 @@ class WebsocketClient:
                                          on_close=lambda ws, css, cs: self.on_close(ws, css, cs),
                                          on_open=self.on_open,
                                          header={'Authorization': f'Bearer {self.bearer_token}'})
+        threading.Thread(target=self.ws.run_forever).start()
+
         self.url = url
-        self.ws.run_forever(dispatcher=rel, reconnect=5)
+        self.speech_speed = speech_speed
+        # self.ws.run_forever(dispatcher=rel, reconnect=5)
         self.conn = db_connection
         self.conn.row_factory = sqlite3.Row
+        self.is_closed = False
 
-        rel.dispatch()
+        # rel.dispatch()
+    def ws_thread(self, *args):
+        self.ws.run_forever()
 
     def run(self):
         with Microphone() as mic:
@@ -142,7 +146,8 @@ class WebsocketClient:
         print("Received back from server:", message)
 
         if message['type'] == 'synthesis':
-            threading.Thread(target=synthesize_text, args=(message['text'], message['sender_id'], self.conn,)).start()
+            threading.Thread(target=synthesize_text, args=(message['text'],
+                                                           message['sender_id'], self.conn, self.speech_speed,)).start()
         elif message['type'] == 'room_users':
             for users in message['users']:
                 user_id = users['user_id']
@@ -196,7 +201,7 @@ class WebsocketClient:
         threading.Thread(target=self.run, daemon=True).start()
 
     def send_message(self, message):
-        if self.ws:
+        if self.ws and not self.is_closed:
             self.ws.send(message)
 
 
@@ -209,7 +214,7 @@ def main():
 
     create_tables(conn)
 
-    oleg = User(username='KpyTou_4yBaK_15',
+    oleg = User(username='KpyTou_4yBaK_16',
                 password='olegtachki2012',
                 voice_sample_path=voice_sample,
                 db_connection=conn)
@@ -221,7 +226,8 @@ def main():
 
     ws = WebsocketClient(f"ws://{SERVER_URL}/room/{room_id}/connect?lang=ru",
                          bearer_token=oleg.access_token,
-                         db_connection=conn)
+                         db_connection=conn,
+                         speech_speed=SPEECH_SPEED)
 
 
 if __name__ == '__main__':

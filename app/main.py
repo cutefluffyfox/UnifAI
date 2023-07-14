@@ -1,18 +1,58 @@
 import configparser
 import threading
+import sqlite3
 
 import dearpygui.dearpygui as dpg
+import logging
 import sys
 import os
 import ctypes
 from configparser import ConfigParser
 import sounddevice
 from app.sounddevice_mic import Recorder
-from client import *
+
+from client import synthesize_text, create_tables, play_sound, check_if_outdated, WebsocketClient
+
+from model import FasterWhisper
+from user import AbstractUser, User
+
+from voice_cloning.downloader import PiperDownloader, FreeVC24Downloader
+from voice_cloning.vc import VoiceCloningModel
+from voice_cloning.piper import Piper
 
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 700
 
+SERVER_URL = "10.91.8.138:8080/api/v1"
+# SERVER_URL = "127.0.0.1:5000"
+voice_sample = '../samples/sample_self.wav'
+
+PIPER_MODEL = 'en_US-libritts-high'
+SELF_UID = None
+ws = None
+available_language_models = {}
+
+FORMAT = '%(asctime)s : %(message)s'
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
+
+# FreeVC24Downloader().download()
+# PiperDownloader(PIPER_MODEL).download()
+
+stt_model = FasterWhisper(model_name='base')
+piper = Piper(PIPER_MODEL, use_cuda='auto')
+vc = VoiceCloningModel()
+
+db_name = 'storage.db'
+conn = sqlite3.connect(db_name, check_same_thread=False)
+
+if not os.path.exists('../tmp'):
+    os.mkdir('../tmp')
+
+if not os.path.exists('../samples'):
+    os.mkdir('../samples')
+
+create_tables(conn)
 
 login_window_global = -1
 settings_window_global = -1
@@ -26,7 +66,7 @@ logged_in = False
 
 viewport_menu_bar_global = -1
 recorder = Recorder()
-user = None
+user = AbstractUser()
 
 
 class Settings:
@@ -34,12 +74,13 @@ class Settings:
         self.settings_file = settings_file
         # Main settings
         self.volume = 100
-        self.playback_speed = 1
-        self.model_size = "medium"
+        self.playback_speed = 1.
+        self.model_size = "base"
         self.input_device_name = "default"
+        self.server_url = "10.91.8.138:8080/api/v1"
         # Language settings
-        self.language = "english"
-        self.language_model = "medium"
+        self.language = "en_GB"
+        self.language_model = "alan-low"
         self.language_settings_initialized = "0"
 
     def read_settings_from_file(self):
@@ -53,6 +94,7 @@ class Settings:
                 self.playback_speed = config.getfloat('main', 'playback_speed')
                 self.model_size = config.get('main', 'model_size')
                 self.input_device_name = config.get('main', 'input_device_name')
+                self.server_url = config.get('main', 'server_url')
                 self.language = config.get('language', 'language')
                 self.language_model = config.get('language', 'language_model')
                 self.language_settings_initialized = config.get('language', 'language_settings_initialized')
@@ -69,6 +111,7 @@ class Settings:
         config.set('main', 'playback_speed', str(self.playback_speed))
         config.set('main', 'model_size', self.model_size)
         config.set('main', 'input_device_name', self.input_device_name)
+        config.set('main', 'server_url', self.server_url)
         config.add_section('language')
         config.set('language', 'language', self.language)
         config.set('language', 'language_model', self.language_model)
@@ -104,25 +147,39 @@ def get_input_device_names():
     return list(map(lambda x: x['name'], list(filter(lambda x: x['max_input_channels'] > 1, sounddevice.query_devices()))))
 
 
+def get_all_tts_models():
+    with open("available_models.txt", "r") as avail_models_file:
+        lines = list(map(lambda x: x.strip(), avail_models_file.readlines()))
+        split_pairs = list(map(lambda x: x.split('-', 1), lines))
+        language_models = {}
+        for pair in split_pairs:
+            language_models.setdefault(pair[0], []).append(pair[1])
+        global available_language_models
+        available_language_models = language_models
+    return language_models
+
+
 def get_eligible_languages():
-    language_list = ["English", "Russian", "German", "Japanese", "Chinese"]
+    if not available_language_models:
+        get_all_tts_models()
+    language_list = list(available_language_models.keys())
     return language_list
 
 
 def get_eligible_models_for_language(language):
-    language = str.lower(language)
-    language_model = {
-        "english": ["tiny", "base", "small", "medium", "large"],
-        "russian": ["base", "small", "large"],
-        "german": ["small", "medium", "large"],
-        "japanese": ["base", "medium", "large"],
-        "chinese": ["tiny", "medium", "large"],
-    }
-    return language_model[language]
+    if not available_language_models:
+        get_all_tts_models()
+    return available_language_models[language]
 
 
 def login_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
+    global user
+    user = User(username=dpg.get_value('usernamebox'),
+                password=dpg.get_value('passwordbox'),
+                voice_sample_path=voice_sample,
+                db_connection=conn)
+
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
     else:
@@ -167,8 +224,10 @@ def start_recording_callback():
 
 
 def stop_recording_callback():
+    global user
     recorder.is_recording = False
     print('stopped callback')
+    user.send_sample_data()
     go_to_room_choose_screen()
 
 
@@ -179,27 +238,54 @@ def go_to_room_choose_screen():
 
 
 def join_room_callback():
+    global user
+    global settings_object_global
+    global ws
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
     roomName = dpg.get_value('roomnamebox')
+
+    user.join_room(int(roomName))
+
     dpg.show_item(main_app_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(main_app_window_global, True)
+    ws = WebsocketClient(f"ws://{SERVER_URL}/room/{int(roomName)}/connect"
+                         f"?lang={settings_object_global.language.split('_')[0]}",
+                         bearer_token=user.access_token,
+                         db_connection=conn,
+                         speech_speed=settings_object_global.playback_speed)
 
 
 def create_room_callback():
+    global user
+    global ws
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
     roomName = dpg.get_value('roomnamebox')
+
+    room_id = user.create_room(admin_id=0, description='test', name=roomName)
+
     dpg.show_item(main_app_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(main_app_window_global, True)
+    ws = WebsocketClient(f"ws://{SERVER_URL}/room/{room_id}/connect"
+                         f"?lang={settings_object_global.language.split('_')[0]}",
+                         bearer_token=user.access_token,
+                         db_connection=conn,
+                         speech_speed=settings_object_global.playback_speed)
 
 
 def leave_room_callback():
+    global user
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    #roomName = dpg.get_value('roomnamebox')
+    # roomName = dpg.get_value('roomnamebox')
+    user.leave_room(user.get_current_room_id())
+
     dpg.show_item(room_choose_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(room_choose_window_global, True)
+    ws.is_closed = True
+    ws.ws.close()
+
 
 def open_settings_window_callback():
     dpg.show_item(settings_window_global)
@@ -223,8 +309,10 @@ def change_playback_speed_callback(sender):
 
 def change_model_size_callback(sender):
     global settings_object_global
+    global stt_model
     model_size_value = str.lower(dpg.get_value(sender))
     settings_object_global.model_size = model_size_value
+    stt_model = FasterWhisper(model_name=model_size_value)
 
 
 def change_input_device_callback(sender):
@@ -244,8 +332,19 @@ def change_language_callback(sender):
 
 def change_language_model_callback(sender):
     global settings_object_global
+    global piper
     language_model_value = dpg.get_value(sender)
     settings_object_global.language_model = language_model_value
+    model = settings_object_global.language + '-' + language_model_value
+    piper = Piper(model, use_cuda='auto')
+    PiperDownloader(model).download()
+
+
+def change_server_url_callback(sender):
+    global settings_object_global
+    server_url_value = dpg.get_value(sender)
+    if len(server_url_value) > 3:
+        settings_object_global.server_url = dpg.get_value(sender)
 
 
 def save_settings_callback(sender):
@@ -311,8 +410,6 @@ def main():
 
     settings_object_global.read_settings_from_file()
 
-
-
     # Main Login Window
     with dpg.window(label="Login", autosize=True, no_title_bar=True, no_move=True) as login_window_global:
         with dpg.table(header_row=False, policy=dpg.mvTable_SizingStretchProp):
@@ -331,7 +428,7 @@ def main():
                     dpg.add_spacer(height=20)
 
                     dpg.add_text("Login Screen")
-                    dpg.add_input_text(label="Server Address", tag="addressbox")
+                    dpg.add_input_text(label="Server Address", tag="addressbox", default_value=settings_object_global.server_url, callback=change_server_url_callback)
                     dpg.add_input_text(label="Username", tag="usernamebox")
                     dpg.add_input_text(label="Password", tag="passwordbox", password=True)
                     with dpg.group(horizontal=True):
@@ -341,9 +438,6 @@ def main():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
                     pass
         dpg.set_primary_window(login_window_global, True)
-
-
-
 
     # Voice Record
     with dpg.window(label="Voice record", autosize=True, no_title_bar=True, no_move=True, show=False) as voice_recording_window_global:
@@ -403,9 +497,6 @@ def main():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
                     pass
 
-
-
-
     # MAIN APP WINDOW
     with dpg.window(label="Room Choosing", autosize=True, no_title_bar=True, no_move=True,
                     show=False) as main_app_window_global:
@@ -434,13 +525,13 @@ def main():
     with dpg.window(label="Settings", autosize=True, show=False, on_close=save_settings_callback) as settings_window_global:
         dpg.add_slider_float(label="Volume", clamped=True, tag="settings_volume_slider_box", default_value=settings_object_global.volume, callback=change_volume_callback)
         dpg.add_slider_float(label="Playback Speed", clamped=True, tag="settings_playback_speed_slider_box", min_value=0.3, max_value=5, default_value=settings_object_global.playback_speed, callback=change_playback_speed_callback)
-        dpg.add_combo(["Tiny", "Base", "Small", "Medium", "Large"], label="Model Size", tag="settings_model_size_combo_box", default_value=str.capitalize(settings_object_global.model_size), callback=change_model_size_callback)
+        dpg.add_combo(["tiny", "base", "small", "medium", "large-v2"], label="Model Size", tag="settings_model_size_combo_box", default_value=settings_object_global.model_size, callback=change_model_size_callback)
         dpg.add_combo(get_input_device_names(), label="Input Device", tag="settings_input_device_combo_box", default_value=settings_object_global.input_device_name, callback=change_input_device_callback)
         dpg.add_button(label="Save Settings", callback=save_settings_callback)
 
     # Language Settings Window
     with dpg.window(label="Language Settings", autosize=True, show=False, on_close=language_save_settings_callback) as language_settings_window_global:
-        dpg.add_combo(list(map(lambda x: str.capitalize(x), get_eligible_languages())), label="Language", tag="settings_language_combo_box", default_value=str.capitalize(settings_object_global.language), callback=change_language_callback)
+        dpg.add_combo(get_eligible_languages(), label="Language", tag="settings_language_combo_box", default_value=settings_object_global.language, callback=change_language_callback)
         dpg.add_combo(get_eligible_models_for_language(settings_object_global.language), label="Language Model", tag="settings_language_model_combo_box", default_value=settings_object_global.language_model, callback=change_language_model_callback)
         dpg.add_button(label="Save Settings", callback=language_save_settings_callback)
 
