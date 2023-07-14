@@ -254,6 +254,7 @@ def join_room_callback():
                          bearer_token=user.access_token,
                          db_connection=conn,
                          speech_speed=settings_object_global.playback_speed)
+    dpg.set_value("roomidtext", 'Current room id: ' + str(user.get_current_room_id()))
 
 
 def create_room_callback():
@@ -272,6 +273,7 @@ def create_room_callback():
                          bearer_token=user.access_token,
                          db_connection=conn,
                          speech_speed=settings_object_global.playback_speed)
+    dpg.set_value("roomidtext", 'Current room id: ' + str(user.get_current_room_id()))
 
 
 def leave_room_callback():
@@ -501,7 +503,7 @@ def main():
         dpg.add_spacer(height=25)
 
         dpg.add_button(label="Leave Room", callback=leave_room_callback, width=cell_width)
-        dpg.add_text(label='Current room id:' + str(user.get_current_room_id()))
+        dpg.add_text(label='Current room id:', tag="roomidtext")
         with dpg.table(header_row=False, policy=dpg.mvTable_SizingStretchProp):
             dpg.add_table_column(width=cell_width, width_stretch=True)
             with dpg.table_row():
