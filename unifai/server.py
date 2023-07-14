@@ -1,6 +1,6 @@
 import grpc
-import unifai.translate_pb2 as stub
-import unifai.translate_pb2_grpc as service
+import translate_pb2 as stub
+import translate_pb2_grpc as service
 from concurrent.futures import ThreadPoolExecutor
 import TTTT
 
