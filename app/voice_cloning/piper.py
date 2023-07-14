@@ -13,7 +13,7 @@ from typing import List, Mapping, Optional, Sequence, Union
 
 import torch.cuda
 
-from downloader import Downloader
+from .downloader import Downloader
 
 import numpy as np
 import onnxruntime
