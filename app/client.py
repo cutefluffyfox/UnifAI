@@ -93,14 +93,14 @@ def synthesize_text(text: str, sender_id: int, db_connection: sqlite3.Connection
     cur.execute('SELECT sample_path FROM user_samples WHERE user_id = ?', (sender_id,))
 
     if (result := cur.fetchone()) is not None:
-        voice_sample_path = result['voice_path']
-        logger.info(f'Cloning voice with {voice_sample_path} sample...')
+        voice_sample_path = result['sample_path']
+        print(f'Cloning voice with {voice_sample_path} sample...')
 
         vc.synthesise_and_save(speech_path=file_name,
                                voice_path=voice_sample_path,
                                output_file=file_name)
     else:
-        logger.info(f'No sample audio for {sender_id} found, proceeding without voice cloning')
+        print(f'No sample audio for {sender_id} found, proceeding without voice cloning')
 
     threading.Thread(target=play_sound, args=(os.path.abspath(file_name),)).start()
     cur.close()
@@ -212,7 +212,7 @@ def main():
 
     create_tables(conn)
 
-    oleg = User(username='KpyTou_4yBaK_13',
+    oleg = User(username='KpyTou_4yBaK_14',
                 password='olegtachki2012',
                 voice_sample_path=voice_sample,
                 db_connection=conn)

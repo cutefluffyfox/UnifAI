@@ -31,6 +31,8 @@ class User:
         cur.execute('SELECT user_id FROM user WHERE username = ?', (self.username,))
         if cur.fetchone() is not None:
             print('Attempt to register an already existing user')
+            cur.execute('SELECT access_token, refresh_token FROM user WHERE username = ?', (self.username,))
+            self.access_token, self.refresh_token = cur.fetchone()
             return
 
         r = requests.post(f'http://{SERVER_URL}/auth/register', json={
@@ -109,7 +111,7 @@ class User:
     def join_room(self, room_id: int):
         self.refresh_token_if_needed()
 
-        r = requests.post(f'http://{SERVER_URL}/room/{room_id}/join', headers=self.get_headers())
+        r = requests.get(f'http://{SERVER_URL}/room/{room_id}/join', headers=self.get_headers())
 
         if r.status_code != 200:
             print(f'Error while joining room: {r.text}')
@@ -121,7 +123,7 @@ class User:
 
         if int(time.time()) < payload['exp']:
             return
-        print(f"Here: {time.time()} {payload['exp']} {self.get_headers()}")
+
         r = requests.post(f'http://{SERVER_URL}/auth/refresh', headers=self.get_headers())
 
         if r.status_code != 200:
