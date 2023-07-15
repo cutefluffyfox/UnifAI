@@ -23,7 +23,7 @@ from voice_cloning.piper import Piper
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 700
 
-SERVER_URL = "10.91.8.138:8080/api/v1"
+SERVER_URL = "10.91.7.179:8080/api/v1"
 # SERVER_URL = "127.0.0.1:5000"
 voice_sample = '../samples/sample_self.wav'
 
@@ -77,7 +77,7 @@ class Settings:
         self.playback_speed = 1.
         self.model_size = "base"
         self.input_device_name = "default"
-        self.server_url = "10.91.8.138:8080/api/v1"
+        self.server_url = "10.91.7.179:8080/api/v1"
         # Language settings
         self.language = "en_GB"
         self.language_model = "alan-low"
@@ -178,6 +178,7 @@ def login_callback():
     user = User(username=dpg.get_value('usernamebox'),
                 password=dpg.get_value('passwordbox'),
                 voice_sample_path=voice_sample,
+                server_url=dpg.get_value("addressbox"),
                 db_connection=conn)
     user.login()
     user.send_sample_data()
@@ -198,6 +199,7 @@ def register_callback():
     user = User(username=dpg.get_value('usernamebox'),
                 password=dpg.get_value('passwordbox'),
                 voice_sample_path=voice_sample,
+                server_url=dpg.get_value("addressbox"),
                 db_connection=conn)
     user.register()
     user.send_sample_data()
@@ -249,6 +251,7 @@ def join_room_callback():
     roomName = dpg.get_value('roomnamebox')
 
     user.join_room(int(roomName))
+    dpg.set_value("room_choosing_id_text", 'Current room id: ' + roomName)
 
 
 def create_room_callback():
@@ -258,6 +261,7 @@ def create_room_callback():
     roomName = dpg.get_value('roomnamebox')
 
     room_id = user.create_room(admin_id=0, description='test', name=roomName)
+    dpg.set_value("room_choosing_id_text", 'Current room id: ' + str(room_id))
 
 
 def connect_room_callback():
@@ -270,7 +274,7 @@ def connect_room_callback():
     dpg.show_item(main_app_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(main_app_window_global, True)
-    ws = WebsocketClient(f"ws://{SERVER_URL}/room/{int(roomName)}/connect"
+    ws = WebsocketClient(f"ws://{settings_object_global.server_url}/room/{int(roomName)}/connect"
                          f"?lang={settings_object_global.language.split('_')[0]}",
                          bearer_token=user.access_token,
                          db_connection=conn,
@@ -281,14 +285,13 @@ def connect_room_callback():
 def leave_room_callback():
     global user
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    # roomName = dpg.get_value('roomnamebox')
     user.leave_room(user.get_current_room_id())
 
     dpg.show_item(room_choose_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(room_choose_window_global, True)
-    ws.is_closed = True
-    ws.ws.close()
+    ws.close_connection()
+    dpg.set_value("room_choosing_id_text", "")
 
 
 def open_settings_window_callback():
@@ -495,6 +498,7 @@ def main():
                         dpg.add_button(label="Register", callback=create_room_callback, width=cell_width / 3)
                         dpg.add_button(label="Connect", callback=connect_room_callback, width=cell_width / 3)
                     dpg.add_button(label="Log Out", callback=logout_callback, width=cell_width + 8)
+                    dpg.add_text("", tag="room_choosing_id_text")
                 with dpg.table_cell():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
                     pass

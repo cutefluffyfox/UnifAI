@@ -47,7 +47,6 @@ conn = sqlite3.connect(db_name, check_same_thread=False)
 def play_sound(file_name: str):
     data, sample_rate = soundfile.read(file_name, dtype='float32')
 
-    data = np.concatenate((data, np.zeros(sample_rate // 2)))
     sounddevice.play(data, sample_rate, blocking=True)
 
     try:
@@ -111,6 +110,7 @@ def check_if_outdated(last_update: str, latest_update: str):
 class WebsocketClient:
     def __init__(self, url, bearer_token: str, db_connection: sqlite3.Connection, speech_speed: float):
         # websocket.enableTrace(True)
+        self.mic_thread = None
         self.bearer_token = bearer_token
         self.ws = websocket.WebSocketApp(url,
                                          on_message=lambda ws, msg: self.on_message(ws, msg),
@@ -118,7 +118,8 @@ class WebsocketClient:
                                          on_close=lambda ws, css, cs: self.on_close(ws, css, cs),
                                          on_open=self.on_open,
                                          header={'Authorization': f'Bearer {self.bearer_token}'})
-        threading.Thread(target=self.ws.run_forever).start()
+        self.t = threading.Thread(target=self.ws.run_forever)
+        self.t.start()
 
         self.url = url
         self.speech_speed = speech_speed
@@ -128,8 +129,6 @@ class WebsocketClient:
         self.is_closed = False
 
         # rel.dispatch()
-    def ws_thread(self, *args):
-        self.ws.run_forever()
 
     def run(self):
         with Microphone() as mic:
@@ -198,11 +197,20 @@ class WebsocketClient:
 
     def on_open(self, ws):
         print('Opened websocket connection with server')
-        threading.Thread(target=self.run, daemon=True).start()
+        self.mic_thread = threading.Thread(target=self.run)
+        self.mic_thread.start()
 
     def send_message(self, message):
         if self.ws and not self.is_closed:
             self.ws.send(message)
+
+    def close_connection(self):
+        self.is_closed = True
+        self.t.join()
+
+        if self.mic_thread is not None:
+            self.mic_thread.join()
+        self.ws.close()
 
 
 def main():

@@ -5,8 +5,7 @@ import time
 import jwt
 from abc import ABC, abstractmethod, abstractproperty
 
-SERVER_URL = "10.91.8.138:8080/api/v1"
-# SERVER_URL = "127.0.0.1:5000"
+# self.server_url = "127.0.0.1:5000"
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
@@ -57,7 +56,8 @@ class User(AbstractUser):
     def current_room_id(self):
         return self._current_room_id
 
-    def __init__(self, username: str, password: str, voice_sample_path: str, db_connection: sqlite3.Connection):
+    def __init__(self, username: str, password: str, voice_sample_path: str,
+                 server_url: str, db_connection: sqlite3.Connection):
         super().__init__()
         self.access_token = None
         self.refresh_token = None
@@ -67,6 +67,7 @@ class User(AbstractUser):
         self.current_room_id = 0
 
         self.conn = db_connection
+        self.server_url = server_url
         self.conn.row_factory = sqlite3.Row
 
     def get_headers(self):
@@ -82,7 +83,7 @@ class User(AbstractUser):
             self.access_token, self.refresh_token = cur.fetchone()
             return
 
-        r = requests.post(f'http://{SERVER_URL}/auth/register', json={
+        r = requests.post(f'http://{self.server_url}/auth/register', json={
             'username': self.username,
             'password': self.password,
         })
@@ -106,7 +107,7 @@ class User(AbstractUser):
         cur = self.conn.cursor()
         cur.execute('SELECT user_id FROM user WHERE username = ?', (self.username,))
 
-        r = requests.post(f'http://{SERVER_URL}/auth/login', json={
+        r = requests.post(f'http://{self.server_url}/auth/login', json={
             'username': self.username,
             'password': self.password,
         })
@@ -135,7 +136,7 @@ class User(AbstractUser):
         self.refresh_token_if_needed()
 
         with open(self.voice_sample_path, 'rb') as audio_sample:
-            r = requests.post(f'http://{SERVER_URL}/user/audio',
+            r = requests.post(f'http://{self.server_url}/user/audio',
                               files={'audio': audio_sample},
                               headers=self.get_headers())
 
@@ -147,7 +148,7 @@ class User(AbstractUser):
     def create_room(self, admin_id=0, description='description', name='name'):
         self.refresh_token_if_needed()
 
-        r = requests.post(f'http://{SERVER_URL}/room/create', headers=self.get_headers(), json={
+        r = requests.post(f'http://{self.server_url}/room/create', headers=self.get_headers(), json={
             'admin_id': admin_id,
             'description': description,
             'name': name
@@ -164,7 +165,7 @@ class User(AbstractUser):
     def join_room(self, room_id: int):
         self.refresh_token_if_needed()
 
-        r = requests.get(f'http://{SERVER_URL}/room/{room_id}/join', headers=self.get_headers())
+        r = requests.get(f'http://{self.server_url}/room/{room_id}/join', headers=self.get_headers())
         self.current_room_id = room_id
 
         if r.status_code != 200:
@@ -173,7 +174,7 @@ class User(AbstractUser):
     def leave_room(self, room_id: int):
         self.refresh_token_if_needed()
 
-        r = requests.get(f'http://{SERVER_URL}/room/{room_id}/leave', headers=self.get_headers())
+        r = requests.get(f'http://{self.server_url}/room/{room_id}/leave', headers=self.get_headers())
 
         if r.status_code != 200:
             print(f'Error while leaving room: {r.text}')
@@ -184,7 +185,7 @@ class User(AbstractUser):
         if int(time.time()) < payload['exp']:
             return
 
-        r = requests.post(f'http://{SERVER_URL}/auth/refresh', headers=self.get_headers())
+        r = requests.post(f'http://{self.server_url}/auth/refresh', headers=self.get_headers())
 
         if r.status_code != 200:
             print(f'Error while refreshing token pair: {r.text}')
