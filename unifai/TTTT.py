@@ -2,8 +2,9 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 # import torch
 # from typing import Dict
 # import time
+import logging
 
-AVAILABLE_LANGUAGES = ['en', 'ru', 'fr', 'es']#[, 'de', 'zh', 'sv', 'pl', 'fi', 'nl', 'ca', 'is', 'el', 'no', 'it', 'uk', 'vi', 'da', 'pt']
+AVAILABLE_LANGUAGES = ['en', 'ru'] #,'fr', 'es', 'de', 'zh', 'sv', 'pl', 'fi', 'nl', 'ca', 'is', 'el', 'no', 'it', 'uk', 'vi', 'da', 'pt']
 
 
 class SingleWayTTTT:
@@ -20,10 +21,10 @@ class SingleWayTTTT:
             self.model = AutoModelForSeq2SeqLM.from_pretrained(f"Helsinki-NLP/opus-mt-{input_language}-{output_language}")
             self.translate('')
             self.works = True
-            print(f"Model loaded: {input_language} to {output_language}")
+            logging.info(msg = f"Model loaded: {input_language} to {output_language}")
         except Exception:
             self.works = False
-            print(f"Model not loaded: {input_language} to {output_language}")
+            logging.warning(msg = f"Model not loaded: {input_language} to {output_language}")
 
     def translate(self, input_text):
         if self.simple:
@@ -58,22 +59,22 @@ class TTTT:
 
     def translate(self, input_text, input_language, output_language):
         if input_language not in self.languages or output_language not in self.languages:
-            print("NOT IMPLEMENTED LANGUAGES")
-            print("We have following languages")
-            print(self.languages)
+            logging.warning(msg = "NOT SUPPORTED LANGUAGES")
+            logging.warning(msg = "We have following languages")
+            logging.warning(msg = self.languages)
             return
         model = self.__find_model__(input_language, output_language)
         if model.works:
             return model.translate(input_text)
 
         else:
-            print(f"There is no connection between {input_language} and {output_language}")
+            logging.warning(msg = f"There is no connection between {input_language} and {output_language}")
 
     def __find_model__(self, input_language, output_language):
         return self.languageMap[input_language][output_language]
 
     def draw_map(self):
-        s = "   "
+        s = "\n   "
         models = 0
 
         for input_language in self.languages:
@@ -93,7 +94,7 @@ class TTTT:
             s += '\n'
 
         s = f'{s}\nTotal languages: {len(AVAILABLE_LANGUAGES)}\nAmount of models: {models}'
-        print(s)
+        logging.info(msg = s)
         return s
 
 
