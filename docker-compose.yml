@@ -2,31 +2,46 @@ services:
   web:
     build: .
     image: "unifai-backend"
-    depends_on:
-      - db
-      - trans
-
     ports:
       - 8080:8080
     environment:
-      # PORT: "8080"
-      DB_URL: "postgresql://db:5432/"
+      DB_URL: "postgresql://golang:unifaipg@db:5432/unifai"
       JWT_SECRET: "estradiol-seledka"
-      GRPC_ADDR: "unifai-translation:50051"
+      GRPC_ADDR: "10.91.7.179:50051"
+
+      WAIT_HOSTS: db:5432, trans:50051
+      WAIT_SLEEP_INTERVAL: 5
+      WAIT_TIMEOUT: 120
+    depends_on:
+      db:
+        condition: service_healthy
+      trans:
+        condition: service_started
+    restart: always
 
   db:
     image: postgres 
     restart: always
     environment:
       POSTGRES_PASSWORD: "unifaipg"
+      POSTGRES_USER: "golang"
+      POSTGRES_DB: "unifai"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U golang -d unifai"]
+      interval: 5s 
+      timeout: 5s 
+      retries: 5
 
   trans:
     build:
       context: https://cutefluffyfox:${GH_TOKEN}@github.com/cutefluffyfox/UnifAI.git#TTTT
     expose:
       - 50051
+    restart: always
 
 
 volumes:
