@@ -72,9 +72,7 @@ func (c *Client) readPump() {
 
 		lang, err := language.Parse(data.Language)
 		if err != nil {
-			c.mu.Lock()
-			c.conn.WriteJSON(MessageError{MessageType: "error", ErrorType: "language", Err: err})
-			c.mu.Unlock()
+			log.Printf("Invalid language tag from %d: %s\n", c.UserId, data.Language)
 			continue
 		}
 
@@ -93,7 +91,10 @@ func (c *Client) writePump() {
 		select {
 		case message, ok := <- c.Out:
 			if !ok {
+				c.mu.Lock()
 				c.conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(writeWait))
+				c.mu.Unlock()
+				return
 			}
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
@@ -109,11 +110,12 @@ func (c *Client) writePump() {
 
 		case <- ticker.C:
 			c.mu.Lock()
-			if err := c.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(writeWait)); err != nil { 
-				c.mu.Unlock()
-				return // client did not answer ping
-			}
+			err := c.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(writeWait))
 			c.mu.Unlock()
+			if err != nil {
+				log.Printf("Client %d did not answer ping.\n", c.UserId)
+				return
+			}
 		}
 	}
 }
