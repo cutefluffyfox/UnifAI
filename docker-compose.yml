@@ -20,7 +20,7 @@ services:
     restart: always
 
   db:
-    image: postgres 
+    build: ./postgres
     restart: always
     environment:
       POSTGRES_PASSWORD: "unifaipg"
@@ -41,11 +41,12 @@ services:
       context: https://cutefluffyfox:${GH_TOKEN}@github.com/cutefluffyfox/UnifAI.git#TTTT
     expose:
       - 50051
+    volumes:
+      - opusmodels:/root/.cache/huggingface/hub
     restart: always
 
 
 volumes:
   pgdata:
-
   opusmodels:
 

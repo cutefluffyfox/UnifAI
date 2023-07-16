@@ -35,7 +35,6 @@ func main() {
 	if err != nil {
 		log.Printf("Could not read .env: %v\n", err)
 	}
-	config.Migrate(config.Connect()) // TODO: replace with sql file and Docker migrate job probably
 
 	// Initiating DB
 	pool, err := service.NewDBPool()
