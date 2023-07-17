@@ -56,8 +56,7 @@ class User(AbstractUser):
     def current_room_id(self):
         return self._current_room_id
 
-    def __init__(self, username: str, password: str, voice_sample_path: str,
-                 server_url: str, db_connection: sqlite3.Connection):
+    def __init__(self, username: str, password: str, voice_sample_path: str, server_url: str):
         super().__init__()
         self.access_token = None
         self.refresh_token = None
@@ -65,24 +64,12 @@ class User(AbstractUser):
         self.password = password
         self.voice_sample_path = voice_sample_path
         self.current_room_id = 0
-
-        self.conn = db_connection
         self.server_url = server_url
-        self.conn.row_factory = sqlite3.Row
 
     def get_headers(self):
-        print('Headers:', self.access_token)
         return {'Authorization': f'Bearer {self.access_token}'}
 
     def register(self):
-        cur = self.conn.cursor()
-        cur.execute('SELECT user_id FROM user WHERE username = ?', (self.username,))
-        if cur.fetchone() is not None:
-            print('Attempt to register an already existing user')
-            cur.execute('SELECT access_token, refresh_token FROM user WHERE username = ?', (self.username,))
-            self.access_token, self.refresh_token = cur.fetchone()
-            return
-
         r = requests.post(f'http://{self.server_url}/auth/register', json={
             'username': self.username,
             'password': self.password,
@@ -98,14 +85,7 @@ class User(AbstractUser):
         self.access_token = tokens['access_token']
         self.refresh_token = tokens['refresh_token']
 
-        cur.execute(f"INSERT INTO user(username, password, access_token, refresh_token) "
-                    f"VALUES('{self.username}', '{self.password}', '{self.access_token}', '{self.refresh_token}');")
-        self.conn.commit()
-        cur.close()
-
     def login(self):
-        cur = self.conn.cursor()
-        cur.execute('SELECT user_id FROM user WHERE username = ?', (self.username,))
 
         r = requests.post(f'http://{self.server_url}/auth/login', json={
             'username': self.username,
@@ -117,19 +97,10 @@ class User(AbstractUser):
             return
 
         tokens = r.json()
+        print(tokens)
         self.access_token = tokens['access_token']
         self.refresh_token = tokens['refresh_token']
 
-        if cur.fetchone() is None:
-            print('Attempt to log in without registering')
-            cur.execute(f"INSERT INTO user(username, password, access_token, refresh_token) "
-                        f"VALUES('{self.username}', '{self.password}', '{self.access_token}', '{self.refresh_token}');")
-        else:
-            cur.execute(f"UPDATE user SET access_token='{self.access_token}', "
-                        f"refresh_token='{self.refresh_token}' WHERE username='{self.username}'")
-
-        self.conn.commit()
-        cur.close()
         print(f'Logged in, got access_token: {self.access_token}, refresh_token: {self.refresh_token}')
 
     def send_sample_data(self):
@@ -194,11 +165,6 @@ class User(AbstractUser):
         self.access_token = tokens['access_token']
         self.refresh_token = tokens['refresh_token']
 
-        cur = self.conn.cursor()
-        cur.execute(f"UPDATE user SET access_token='{self.access_token}', "
-                    f"refresh_token='{self.refresh_token}' WHERE username='{self.username}'")
-        self.conn.commit()
-        cur.close()
         print('Successfully refreshed token pair')
 
     def get_current_room_id(self):

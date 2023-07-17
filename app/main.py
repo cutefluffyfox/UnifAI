@@ -9,7 +9,7 @@ import os
 import ctypes
 from configparser import ConfigParser
 import sounddevice
-from app.sounddevice_mic import Recorder
+from sounddevice_mic import Recorder
 
 from client import synthesize_text, create_tables, play_sound, check_if_outdated, WebsocketClient
 
@@ -178,10 +178,8 @@ def login_callback():
     user = User(username=dpg.get_value('usernamebox'),
                 password=dpg.get_value('passwordbox'),
                 voice_sample_path=voice_sample,
-                server_url=dpg.get_value("addressbox"),
-                db_connection=conn)
+                server_url=dpg.get_value("addressbox"))
     user.login()
-    user.send_sample_data()
 
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
@@ -199,10 +197,8 @@ def register_callback():
     user = User(username=dpg.get_value('usernamebox'),
                 password=dpg.get_value('passwordbox'),
                 voice_sample_path=voice_sample,
-                server_url=dpg.get_value("addressbox"),
-                db_connection=conn)
+                server_url=dpg.get_value("addressbox"))
     user.register()
-    user.send_sample_data()
 
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
@@ -284,13 +280,18 @@ def connect_room_callback():
 
 def leave_room_callback():
     global user
+    global ws
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    user.leave_room(user.get_current_room_id())
+    # user.leave_room(user.get_current_room_id())
+
+    if ws is not None:
+        ws.close_connection()
+    else:
+        print('Ws is not initialized??')
 
     dpg.show_item(room_choose_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(room_choose_window_global, True)
-    ws.close_connection()
     dpg.set_value("room_choosing_id_text", "")
 
 
@@ -319,6 +320,7 @@ def change_model_size_callback(sender):
     global stt_model
     model_size_value = str.lower(dpg.get_value(sender))
     settings_object_global.model_size = model_size_value
+    print(f'Changing stt model to {model_size_value}')
     stt_model = FasterWhisper(model_name=model_size_value)
 
 

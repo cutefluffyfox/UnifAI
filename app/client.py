@@ -62,17 +62,8 @@ def create_tables(connection: sqlite3.Connection):
                     sample_path text NOT NULL
                 );"""
 
-    create_info = """CREATE TABLE IF NOT EXISTS user (
-                    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username text NOT NULL,
-                    password text NOT NULL,
-                    access_token text NOT NULL,
-                    refresh_token text NOT NULL
-                );"""
-
     cur = connection.cursor()
     cur.execute(create_samples)
-    cur.execute(create_info)
     connection.commit()
     cur.close()
 
@@ -126,6 +117,7 @@ class WebsocketClient:
         # self.ws.run_forever(dispatcher=rel, reconnect=5)
         self.conn = db_connection
         self.conn.row_factory = sqlite3.Row
+        self._stop_event = threading.Event()
         self.is_closed = False
 
         # rel.dispatch()
@@ -133,6 +125,9 @@ class WebsocketClient:
     def run(self):
         with Microphone() as mic:
             for audio_segment in mic.stream():
+                if self.stopped():
+                    return
+
                 data = stt_model.transcribe_speech(audio_segment)
                 print(data)
                 data = json.dumps(data)
@@ -201,13 +196,16 @@ class WebsocketClient:
         self.mic_thread.start()
 
     def send_message(self, message):
-        if self.ws and not self.is_closed:
+        if self.ws and not self.stopped():
             self.ws.send(message)
 
-    def close_connection(self):
-        self.is_closed = True
-        self.t.join()
+    def stopped(self):
+        return self._stop_event.is_set()
 
+    def close_connection(self):
+        self.t.join()
+        self._stop_event.set()
+        print('Mic thread:', self.mic_thread)
         if self.mic_thread is not None:
             self.mic_thread.join()
         self.ws.close()
@@ -225,7 +223,7 @@ def main():
     oleg = User(username='KpyTou_4yBaK_16',
                 password='olegtachki2012',
                 voice_sample_path=voice_sample,
-                db_connection=conn)
+                server_url=SERVER_URL)
 
     oleg.send_sample_data()
     room_id = oleg.create_room()
