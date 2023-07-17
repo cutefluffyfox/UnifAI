@@ -7,7 +7,7 @@ services:
     environment:
       DB_URL: "postgresql://golang:unifaipg@db:5432/unifai"
       JWT_SECRET: "estradiol-seledka"
-      GRPC_ADDR: "10.91.7.179:50051"
+      GRPC_ADDR: "trans:50051"
 
       WAIT_HOSTS: db:5432, trans:50051
       WAIT_SLEEP_INTERVAL: 5
