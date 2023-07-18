@@ -10,6 +10,7 @@ import ctypes
 from configparser import ConfigParser
 import sounddevice
 from sounddevice_mic import Recorder
+import themes
 
 from client import synthesize_text, create_tables, play_sound, check_if_outdated, WebsocketClient
 
@@ -284,10 +285,12 @@ def leave_room_callback():
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
     # user.leave_room(user.get_current_room_id())
 
+    print('Here 1')
     if ws is not None:
         ws.close_connection()
     else:
         print('Ws is not initialized??')
+    print('Here 2')
 
     dpg.show_item(room_choose_window_global)
     dpg.hide_item(dpg.get_active_window())
@@ -411,13 +414,16 @@ def main():
 
     global settings_object_global
     dpg.create_context()
-    dpg.create_viewport(title='UnifAI', small_icon='unifai-icon-32x32.ico', large_icon='unifai-icon-64x64.ico', resizable=False, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
+    dpg.create_viewport(title='UnifAI', small_icon='unifai-icon-32x32.ico',
+                        large_icon='unifai-icon-64x64.ico', resizable=False, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     fix_icon_for_taskbar()
     dpg.setup_dearpygui()
 
-    logo_dimensions = load_image_from_file("../unifai-logo.png", "unifai-logo")
+    logo_dimensions = load_image_from_file("unifai-logo.png", "unifai-logo")
 
     settings_object_global.read_settings_from_file()
+
+    dpg.bind_theme(themes.create_theme_imgui_light())
 
     # Main Login Window
     with dpg.window(label="Login", autosize=True, no_title_bar=True, no_move=True) as login_window_global:
@@ -430,14 +436,16 @@ def main():
             with dpg.table_row():
                 with dpg.table_cell():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
-                    pass
+
                 with dpg.table_cell() as ccell:
-                    dpg.add_spacer(height=25)
+                    dpg.add_spacer(height=25 * 3)
                     dpg.add_image("unifai-logo", width=logo_dimensions[0] / 3, height=logo_dimensions[1] / 3)
-                    dpg.add_spacer(height=20)
+                    dpg.add_spacer(height=20 * 4)
 
                     dpg.add_text("Login Screen")
-                    dpg.add_input_text(label="Server Address", tag="addressbox", default_value=settings_object_global.server_url, callback=change_server_url_callback)
+                    dpg.add_input_text(label="Server Address", tag="addressbox",
+                                       default_value=settings_object_global.server_url,
+                                       callback=change_server_url_callback)
                     dpg.add_input_text(label="Username", tag="usernamebox")
                     dpg.add_input_text(label="Password", tag="passwordbox", password=True)
                     with dpg.group(horizontal=True):
@@ -488,10 +496,10 @@ def main():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
                     pass
                 with dpg.table_cell() as ccell2:
-                    dpg.add_spacer(height=25)
+                    dpg.add_spacer(height=25 * 3)
                     dpg.add_image("unifai-logo", width=logo_dimensions[0] / 3,
                                   height=logo_dimensions[1] / 3)
-                    dpg.add_spacer(height=20)
+                    dpg.add_spacer(height=20 * 4)
 
                     dpg.add_text("Room Choosing")
                     dpg.add_input_text(label="Room Name", tag="roomnamebox")
@@ -503,16 +511,16 @@ def main():
                     dpg.add_text("", tag="room_choosing_id_text")
                 with dpg.table_cell():
                     dpg.add_spacer(width=(WINDOW_WIDTH - cell_width) / 2 - 30)
-                    pass
 
     # MAIN APP WINDOW
     with dpg.window(label="Room Choosing", autosize=True, no_title_bar=True, no_move=True,
                     show=False) as main_app_window_global:
         cell_width = WINDOW_WIDTH
-        dpg.add_spacer(height=25)
+        dpg.add_spacer(height=25 * 3)
 
-        dpg.add_button(label="Leave Room", callback=leave_room_callback, width=cell_width)
         dpg.add_text(label='Current room id:', tag="roomidtext")
+        dpg.add_spacer(height=20)
+        dpg.add_button(label="Leave Room", callback=leave_room_callback, width=cell_width)
         with dpg.table(header_row=False, policy=dpg.mvTable_SizingStretchProp):
             dpg.add_table_column(width=cell_width, width_stretch=True)
             with dpg.table_row():

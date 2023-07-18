@@ -203,7 +203,7 @@ class WebsocketClient:
         return self._stop_event.is_set()
 
     def close_connection(self):
-        self.t.join()
+        # self.t.join()
         self._stop_event.set()
         print('Mic thread:', self.mic_thread)
         if self.mic_thread is not None:
