@@ -187,6 +187,7 @@ def login_callback():
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
     else:
+        user.send_sample_data()
         go_to_room_choose_screen()
 
     global logged_in
@@ -206,6 +207,7 @@ def register_callback():
     if not os.path.exists('../samples/sample_self.wav'):
         go_to_recording_screen()
     else:
+        user.send_sample_data()
         go_to_room_choose_screen()
 
     global settings_object_global
