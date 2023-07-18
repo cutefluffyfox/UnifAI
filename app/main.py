@@ -24,26 +24,6 @@ from voice_cloning.piper import Piper
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 700
 
-SERVER_URL = "10.91.7.179:8080/api/v1"
-# SERVER_URL = "127.0.0.1:5000"
-voice_sample = '../samples/sample_self.wav'
-
-PIPER_MODEL = 'en_US-libritts-high'
-SELF_UID = None
-ws = None
-available_language_models = {}
-
-FORMAT = '%(asctime)s : %(message)s'
-logger = logging.getLogger(__name__)
-logger.setLevel(level=logging.INFO)
-
-# FreeVC24Downloader().download()
-# PiperDownloader(PIPER_MODEL).download()
-
-stt_model = FasterWhisper(model_name='base')
-piper = Piper(PIPER_MODEL, use_cuda='auto')
-vc = VoiceCloningModel()
-
 db_name = 'storage.db'
 conn = sqlite3.connect(db_name, check_same_thread=False)
 
@@ -80,9 +60,11 @@ class Settings:
         self.input_device_name = "default"
         self.server_url = "10.91.7.179:8080/api/v1"
         # Language settings
-        self.language = "en_GB"
-        self.language_model = "alan-low"
+        self.language = "ru_RU"
+        self.language_model = "irina-medium"
         self.language_settings_initialized = "0"
+
+        self.read_settings_from_file()
 
     def read_settings_from_file(self):
         config = ConfigParser()
@@ -122,6 +104,26 @@ class Settings:
 
 
 settings_object_global = Settings('../config.ini')
+
+SERVER_URL = settings_object_global.server_url
+# SERVER_URL = "127.0.0.1:5000"
+voice_sample = '../samples/sample_self.wav'
+
+PIPER_MODEL = settings_object_global.language + '-' + settings_object_global.language_model
+SELF_UID = None
+ws = None
+available_language_models = {}
+
+FORMAT = '%(asctime)s : %(message)s'
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
+
+FreeVC24Downloader().download()
+PiperDownloader(PIPER_MODEL).download()
+
+stt_model = FasterWhisper(model_name=settings_object_global.model_size.lower())
+piper = Piper(PIPER_MODEL, use_cuda='auto')
+vc = VoiceCloningModel()
 
 
 def fix_icon_for_taskbar():
@@ -265,17 +267,26 @@ def connect_room_callback():
     global user
     global settings_object_global
     global ws
+    global piper
+    global vc
+    global stt_model
     print(f'Server address: {dpg.get_value("addressbox")}, username: {dpg.get_value("usernamebox")}')
-    roomName = dpg.get_value('roomnamebox')
+    room_id = int(dpg.get_value('roomnamebox'))
 
     dpg.show_item(main_app_window_global)
     dpg.hide_item(dpg.get_active_window())
     dpg.set_primary_window(main_app_window_global, True)
-    ws = WebsocketClient(f"ws://{settings_object_global.server_url}/room/{int(roomName)}/connect"
-                         f"?lang={settings_object_global.language.split('_')[0]}",
+
+    ws = WebsocketClient(url=settings_object_global.server_url,
                          bearer_token=user.access_token,
                          db_connection=conn,
-                         speech_speed=settings_object_global.playback_speed)
+                         speech_speed=settings_object_global.playback_speed,
+                         piper_model=piper,
+                         voice_cloning_model=vc,
+                         stt_model=stt_model,
+                         room_id=room_id,
+                         language=settings_object_global.language.split('_')[0])
+
     dpg.set_value("roomidtext", 'Current room id: ' + str(user.get_current_room_id()))
 
 

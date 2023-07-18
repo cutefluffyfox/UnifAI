@@ -23,25 +23,6 @@ from voice_cloning.settings import SPEECH_SPEED, PIPER_MODEL
 from voice_cloning.downloader import PiperDownloader, FreeVC24Downloader
 from voice_cloning.vc import VoiceCloningModel
 from voice_cloning.piper import Piper
-SERVER_URL = "10.91.8.138:8080/api/v1"
-# SERVER_URL = "127.0.0.1:5000"
-voice_sample = '../samples/sample_self.wav'
-
-SELF_UID = None
-
-FORMAT = '%(asctime)s : %(message)s'
-logger = logging.getLogger(__name__)
-logger.setLevel(level=logging.INFO)
-
-# FreeVC24Downloader().download()
-# PiperDownloader(PIPER_MODEL).download()
-
-stt_model = FasterWhisper(model_name='base')
-piper = Piper(PIPER_MODEL, use_cuda='auto')
-vc = VoiceCloningModel()
-
-db_name = 'storage.db'
-conn = sqlite3.connect(db_name, check_same_thread=False)
 
 
 def play_sound(file_name: str):
@@ -68,12 +49,13 @@ def create_tables(connection: sqlite3.Connection):
     cur.close()
 
 
-def synthesize_text(text: str, sender_id: int, db_connection: sqlite3.Connection, speech_speed: float):
+def synthesize_text(text: str, sender_id: int, db_connection: sqlite3.Connection, speech_speed: float,
+                    piper_model, voice_cloning_model):
     file_name = f'../tmp/{str(uuid.uuid4())}.wav'
 
-    piper.synthesize_and_save(text,
-                              output_file=file_name,
-                              length_scale=speech_speed)
+    piper_model.synthesize_and_save(text,
+                                    output_file=file_name,
+                                    length_scale=speech_speed)
     cur = db_connection.cursor()
     cur.execute('SELECT sample_path FROM user_samples WHERE user_id = ?', (sender_id,))
 
@@ -81,9 +63,9 @@ def synthesize_text(text: str, sender_id: int, db_connection: sqlite3.Connection
         voice_sample_path = result['sample_path']
         print(f'Cloning voice with {voice_sample_path} sample...')
 
-        vc.synthesise_and_save(speech_path=file_name,
-                               voice_path=voice_sample_path,
-                               output_file=file_name)
+        voice_cloning_model.synthesise_and_save(speech_path=file_name,
+                                                voice_path=voice_sample_path,
+                                                output_file=file_name)
     else:
         print(f'No sample audio for {sender_id} found, proceeding without voice cloning')
 
@@ -99,11 +81,15 @@ def check_if_outdated(last_update: str, latest_update: str):
 
 
 class WebsocketClient:
-    def __init__(self, url, bearer_token: str, db_connection: sqlite3.Connection, speech_speed: float):
+    def __init__(self, url, bearer_token: str, db_connection: sqlite3.Connection, speech_speed: float,
+                 piper_model, voice_cloning_model, stt_model, room_id: int, language: str):
         # websocket.enableTrace(True)
         self.mic_thread = None
         self.bearer_token = bearer_token
-        self.ws = websocket.WebSocketApp(url,
+        self.base_url = url
+        self.room_id = room_id
+        self.language = language
+        self.ws = websocket.WebSocketApp(f"ws://{self.base_url}/room/{self.room_id}/connect?lang={self.language}",
                                          on_message=lambda ws, msg: self.on_message(ws, msg),
                                          on_error=lambda ws, msg: self.on_error(ws, msg),
                                          on_close=lambda ws, css, cs: self.on_close(ws, css, cs),
@@ -111,6 +97,9 @@ class WebsocketClient:
                                          header={'Authorization': f'Bearer {self.bearer_token}'})
         self.t = threading.Thread(target=self.ws.run_forever)
         self.t.start()
+        self.piper_model = piper_model
+        self.voice_cloning_model = voice_cloning_model
+        self.stt_model = stt_model
 
         self.url = url
         self.speech_speed = speech_speed
@@ -128,7 +117,7 @@ class WebsocketClient:
                 if self.stopped():
                     return
 
-                data = stt_model.transcribe_speech(audio_segment)
+                data = self.stt_model.transcribe_speech(audio_segment)
                 print(data)
                 data = json.dumps(data)
                 if data:
@@ -141,7 +130,8 @@ class WebsocketClient:
 
         if message['type'] == 'synthesis':
             threading.Thread(target=synthesize_text, args=(message['text'],
-                                                           message['sender_id'], self.conn, self.speech_speed,)).start()
+                                                           message['sender_id'], self.conn, self.speech_speed,
+                                                           self.piper_model, self.voice_cloning_model)).start()
         elif message['type'] == 'room_users':
             for users in message['users']:
                 user_id = users['user_id']
@@ -162,7 +152,7 @@ class WebsocketClient:
 
                 if not user_exists or is_outdated:
                     print(f'User #{user_id} sample is not stored or is outdated, requesting sample from server')
-                    audio = requests.get(f'http://{SERVER_URL}/user/audio/{user_id}',
+                    audio = requests.get(f'http://{self.base_url}/user/audio/{user_id}',
                                          headers={'Authorization': f'Bearer {self.bearer_token}'})
 
                     if audio.status_code != 200:
@@ -218,6 +208,26 @@ def main():
     if not os.path.exists('../samples'):
         os.mkdir('../samples')
 
+    SERVER_URL = "10.91.8.138:8080/api/v1"
+    # SERVER_URL = "127.0.0.1:5000"
+    voice_sample = '../samples/sample_self.wav'
+
+    SELF_UID = None
+
+    FORMAT = '%(asctime)s : %(message)s'
+    logger = logging.getLogger(__name__)
+    logger.setLevel(level=logging.INFO)
+
+    # FreeVC24Downloader().download()
+    # PiperDownloader(PIPER_MODEL).download()
+
+    stt_model = FasterWhisper(model_name='base')
+    piper = Piper(PIPER_MODEL, use_cuda='auto')
+    vc = VoiceCloningModel()
+
+    db_name = 'storage.db'
+    conn = sqlite3.connect(db_name, check_same_thread=False)
+
     create_tables(conn)
 
     oleg = User(username='KpyTou_4yBaK_16',
@@ -230,10 +240,15 @@ def main():
     print('Created room with id', room_id)
     input()
 
-    ws = WebsocketClient(f"ws://{SERVER_URL}/room/{room_id}/connect?lang=ru",
+    ws = WebsocketClient(url=SERVER_URL,
                          bearer_token=oleg.access_token,
                          db_connection=conn,
-                         speech_speed=SPEECH_SPEED)
+                         speech_speed=SPEECH_SPEED,
+                         piper_model=piper,
+                         voice_cloning_model=vc,
+                         stt_model=stt_model,
+                         room_id=room_id,
+                         language='ru')
 
 
 if __name__ == '__main__':
